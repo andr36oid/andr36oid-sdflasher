@@ -6,6 +6,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/flash"
+	"github.com/andr36oid/andr36oid-sdflasher/internal/i18n"
 	"image"
 	"image/color"
 	"image/draw"
@@ -97,14 +98,14 @@ func (m *diskMap) update(p flash.Progress) {
 	m.refresh()
 }
 func (m *diskMap) refresh() { m.img.Image = m.render(); m.img.Refresh() }
-func legend() *fyne.Container {
+func legend(locale string) *fyne.Container {
 	items := []fyne.CanvasObject{}
 	for _, x := range []struct {
 		state int
 		name  string
 	}{{1, "Pending"}, {4, "Writing"}, {5, "Written"}, {3, "Verified"}, {2, "Preserved"}} {
 		r := canvas.NewRectangle(mapColors[x.state])
-		items = append(items, container.NewHBox(container.NewGridWrap(fyne.NewSize(12, 12), r), widget.NewLabel(x.name)))
+		items = append(items, container.NewHBox(container.NewGridWrap(fyne.NewSize(12, 12), r), widget.NewLabel(i18n.Text(locale, x.name))))
 	}
 	return container.NewHBox(items...)
 }

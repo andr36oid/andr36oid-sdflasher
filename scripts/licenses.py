@@ -19,3 +19,8 @@ while raw.strip():
         if p.is_file() and p.name.upper().startswith(('LICENSE', 'COPYING', 'NOTICE')):
             name = module['Path'].replace('/', '_') + '-' + p.name
             shutil.copyfile(p, out / name)
+
+for directory in ['internal/ui/flags', 'internal/ui/fonts']:
+    for p in pathlib.Path(directory).iterdir():
+        if p.name in ['LICENSE', 'NOTICE'] or p.name.endswith('-OFL.txt'):
+            shutil.copyfile(p, out / (p.parent.name + '-' + p.name))

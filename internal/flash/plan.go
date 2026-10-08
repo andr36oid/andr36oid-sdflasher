@@ -9,7 +9,6 @@ import (
 	"github.com/andr36oid/andr36oid-sdflasher/internal/firmware"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/layout"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -58,7 +57,7 @@ func Snapshot(r io.ReaderAt, size int64) (string, error) {
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
-func InspectCard(f *os.File, size int64) (Card, error) {
+func InspectCard(f io.ReaderAt, size int64) (Card, error) {
 	c := Card{}
 	var e error
 	c.Fingerprint, e = Snapshot(f, size)

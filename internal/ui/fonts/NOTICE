@@ -1,0 +1,7 @@
+SD Flasher UI is a subset and merge of Noto Sans, Noto Sans Devanagari, Noto Sans KR and Noto Sans SC, distributed under the SIL Open Font License 1.1. Original source: https://github.com/google/fonts (ofl/notosans, ofl/notosansdevanagari, ofl/notosanskr, ofl/notosanssc). The modified font family has been renamed.
+
+Source SHA256:
+bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d  Latin.ttf
+14ec4af41f27482216d1c2229f417ff9b1425e1babb014e57d1d40d03229853e  Devanagari.ttf
+194018e6b2b293a7964f037b25c0249ce1418bc9ab3c971060a03aa57861e252  Korean.ttf
+a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da  CJK.ttf

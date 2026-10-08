@@ -1,0 +1,18 @@
+plugins { id 'com.android.library'; id 'org.jetbrains.kotlin.android' }
+android {
+    namespace 'me.jahnen.libaums.core'
+    compileSdk 36
+    buildFeatures { buildConfig true }
+    ndkVersion '26.1.10909125'
+    defaultConfig {
+        minSdk 23
+        externalNativeBuild { cmake { arguments "-DUSB_SOURCE=${rootDir}/../build/usb-source" } }
+    }
+    sourceSets.main {
+        java.srcDirs = ["${rootDir}/../build/usb-source/libaums/src/main/java", "${rootDir}/../build/usb-source/libusbcommunication/src/main/java"]
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = '17'; languageVersion = '1.9'; apiVersion = '1.9' }
+    externalNativeBuild { cmake { path 'CMakeLists.txt'; version '3.22.1' } }
+}
+dependencies { implementation 'androidx.core:core-ktx:1.9.0'; implementation 'org.jetbrains.kotlin:kotlin-stdlib:2.2.20' }

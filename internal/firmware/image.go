@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
+	"io/fs"
 	"os"
 	"path"
 	"regexp"
@@ -54,7 +55,7 @@ func ReadFile(fs filesystem.FileSystem, name string, limit int64) ([]byte, error
 	}
 	return b, e
 }
-func OpenBoot(f *os.File, t layout.Table, readOnly bool) (*fat32.FileSystem, error) {
+func OpenBoot(f io.ReaderAt, t layout.Table, readOnly bool) (*fat32.FileSystem, error) {
 	p, ok := t.Find("BOOT")
 	if !ok {
 		p, ok = t.Number(1)
@@ -62,9 +63,18 @@ func OpenBoot(f *os.File, t layout.Table, readOnly bool) (*fat32.FileSystem, err
 	if !ok {
 		return nil, errors.New("BOOT partition missing")
 	}
-	storage := bootStorage{Storage: file.New(f, readOnly), start: p.Offset(), size: p.Size()}
+	if !readOnly {
+		return nil, errors.New("BOOT inspection is read-only")
+	}
+	storage := bootStorage{Storage: file.New(readOnlyImage{io.NewSectionReader(f, 0, t.Size)}, true), start: p.Offset(), size: p.Size()}
 	return fat32.Read(storage, p.Size(), p.Offset(), 512)
 }
+
+// Filesystem inspection also accepts USB-backed readers without an OS disk handle.
+type readOnlyImage struct{ *io.SectionReader }
+
+func (readOnlyImage) Stat() (fs.FileInfo, error) { return nil, backend.ErrNotSuitable }
+func (readOnlyImage) Close() error               { return nil }
 
 // FAT files may end between sectors. Raw Windows and macOS devices still need
 // complete sector reads; also keep every filesystem read inside BOOT.

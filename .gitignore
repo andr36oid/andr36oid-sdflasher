@@ -1,3 +1,9 @@
 /dist/
 /build/
 *.test
+/android/.gradle/
+/android/**/build/
+/android/**/.cxx/
+/android/local.properties
+*.jks
+*.keystore

@@ -16,7 +16,7 @@ jobs:
           cache: true
       - run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libwayland-dev libxkbcommon-dev libegl1-mesa-dev xorg-dev xvfb e2fsprogs
       - run: go vet ./...
-      - run: go test -race ./internal/layout ./internal/extfs ./internal/firmware ./internal/flash ./internal/catalog ./internal/jobs ./internal/platform
+      - run: go test -race ./internal/layout ./internal/extfs ./internal/firmware ./internal/flash ./internal/catalog ./internal/jobs ./internal/platform ./internal/i18n ./mobile
       - run: xvfb-run -a go test ./internal/ui
       - run: go test ./internal/layout -fuzz=FuzzRead -fuzztime=15s
       - run: go test ./internal/extfs -fuzz=FuzzOpen -fuzztime=15s
@@ -109,9 +109,102 @@ jobs:
           name: sdflasher-${{ matrix.target }}-${{ matrix.arch }}
           path: dist/*
           if-no-files-found: error
+  android:
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Android SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;26.1.10909125' 'cmake;3.22.1'
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
+            echo "VERSION=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-dev.${GITHUB_SHA:0:8}" >> "$GITHUB_ENV"
+          fi
+          echo "ANDROID_VERSION_CODE=$((10000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+      - name: Configure APK signing
+        if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/android-release.jks"
+          echo "ANDROID_KEYSTORE=$RUNNER_TEMP/android-release.jks" >> "$GITHUB_ENV"
+      - name: Build and check Android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: bash scripts/build-android.sh
+      - name: Delete signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/android-release.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdflasher-android-universal
+          path: dist/*
+          if-no-files-found: error
+      - name: Build emulator test inputs
+        run: android/gradlew -p android :app:assembleDebug :app:assembleDebugAndroidTest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-test-inputs
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+  android-smoke:
+    needs: android
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {api: 23, arch: x86}
+          - {api: 35, arch: x86_64}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-test-inputs
+          path: apks
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: ${{ matrix.arch }}
+          target: default
+          disable-animations: true
+          script: |
+            adb install apks/debug/app-debug.apk
+            adb install apks/androidTest/debug/app-debug-androidTest.apk
+            adb shell am instrument -w io.github.andr36oid.sdflasher.debug.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation.txt
+            grep -q 'OK (' instrumentation.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-smoke-${{ matrix.api }}
+          path: instrumentation.txt
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, android, android-smoke]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -125,6 +218,7 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+          pattern: sdflasher-*
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -133,6 +227,7 @@ jobs:
           cat dist/SHA256SUMS-* > dist/SHA256SUMS
           rm dist/SHA256SUMS-*
           (cd dist && sha256sum --check SHA256SUMS)
+          python3 scripts/release-notes.py "$TAG" > release-notes.md
           flags=()
           if [[ "$TAG" == *-* ]]; then
             flags+=(--prerelease --latest=false)
@@ -140,5 +235,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
           else
-            gh release create "$TAG" dist/* --verify-tag --generate-notes --title "$TAG" "${flags[@]}"
+            gh release create "$TAG" dist/* --verify-tag --generate-notes --notes-file release-notes.md --title "$TAG" "${flags[@]}"
           fi

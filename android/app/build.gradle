@@ -1,0 +1,42 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'io.github.andr36oid.sdflasher'
+    compileSdk 36
+    ndkVersion '26.1.10909125'
+    defaultConfig {
+        applicationId 'io.github.andr36oid.sdflasher'
+        minSdk 23
+        targetSdk 36
+        versionCode Integer.parseInt(System.getenv('ANDROID_VERSION_CODE') ?: '1')
+        versionName System.getenv('VERSION') ?: 'development'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        release {
+            if (System.getenv('ANDROID_KEYSTORE')) {
+                storeFile file(System.getenv('ANDROID_KEYSTORE'))
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias 'sdflasher'
+                keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes {
+        debug { applicationIdSuffix '.debug' }
+        release { minifyEnabled false; signingConfig signingConfigs.release }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    sourceSets.main.assets.srcDirs = ["${rootDir}/../build/android-assets"]
+    packaging.jniLibs.useLegacyPackaging = false
+    lint { abortOnError true }
+}
+dependencies {
+    implementation files('../../build/sdflasher-mobile.aar')
+    implementation project(':usb')
+    implementation 'androidx.core:core:1.15.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}
