@@ -18,6 +18,7 @@ import (
 
 	"github.com/andr36oid/andr36oid-sdflasher/internal/extfs"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/layout"
+	"github.com/diskfs/go-diskfs/backend"
 	"github.com/diskfs/go-diskfs/backend/file"
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/diskfs/go-diskfs/filesystem/fat32"
@@ -61,7 +62,43 @@ func OpenBoot(f *os.File, t layout.Table, readOnly bool) (*fat32.FileSystem, err
 	if !ok {
 		return nil, errors.New("BOOT partition missing")
 	}
-	return fat32.Read(file.New(f, readOnly), p.Size(), p.Offset(), 512)
+	storage := bootStorage{Storage: file.New(f, readOnly), start: p.Offset(), size: p.Size()}
+	return fat32.Read(storage, p.Size(), p.Offset(), 512)
+}
+
+// FAT files may end between sectors. Raw Windows and macOS devices still need
+// complete sector reads; also keep every filesystem read inside BOOT.
+type bootStorage struct {
+	backend.Storage
+	start, size int64
+}
+
+func (s bootStorage) ReadAt(p []byte, off int64) (int, error) {
+	if off < s.start || off-s.start > s.size || int64(len(p)) > s.size-(off-s.start) {
+		return 0, io.EOF
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	if off%512 == 0 && len(p)%512 == 0 {
+		return s.Storage.ReadAt(p, off)
+	}
+	start := off / 512 * 512
+	length := (off - start + int64(len(p)) + 511) / 512 * 512
+	b := make([]byte, length)
+	n, e := s.Storage.ReadAt(b, start)
+	available := int64(n) - (off - start)
+	if available < 0 {
+		available = 0
+	}
+	if available > int64(len(p)) {
+		available = int64(len(p))
+	}
+	copy(p, b[off-start:off-start+available])
+	if int(available) != len(p) && e == nil {
+		e = io.ErrUnexpectedEOF
+	}
+	return int(available), e
 }
 func Inspect(ctx context.Context, p string, progress func(int64, int64)) (*Image, error) {
 	f, e := os.Open(p)
