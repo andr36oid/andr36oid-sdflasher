@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.andr36oid.sdflasher</id>
+  <name>andr36oid SD Flasher</name>
+  <summary>Install and update andr36oid microSD cards</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <description><p>Prepare a microSD card for your console, choose its board and panel, and install a Treble release. Update compatible existing cards while preserving apps, saves, and games.</p></description>
+  <launchable type="desktop-id">io.github.andr36oid.sdflasher.desktop</launchable>
+  <url type="homepage">https://github.com/andr36oid/andr36oid-sdflasher</url>
+  <content_rating type="oars-1.1"/>
+</component>

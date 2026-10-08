@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=andr36oid SD Flasher
+Comment=Install and update andr36oid microSD cards
+Exec=andr36oid-sdflasher
+Icon=io.github.andr36oid.sdflasher
+Terminal=false
+Categories=System;Utility;
+StartupWMClass=andr36oid-sdflasher

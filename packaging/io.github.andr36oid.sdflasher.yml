@@ -1,0 +1,32 @@
+app-id: io.github.andr36oid.sdflasher
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: andr36oid-sdflasher
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --device=dri
+  - --share=network
+  - --filesystem=host
+  - --talk-name=org.freedesktop.Flatpak
+modules:
+  - name: sdflasher
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 andr36oid-sdflasher /app/bin/andr36oid-sdflasher
+      - install -Dm755 andr36oid-sdflasher-helper /app/bin/andr36oid-sdflasher-helper
+      - install -Dm644 io.github.andr36oid.sdflasher.desktop /app/share/applications/io.github.andr36oid.sdflasher.desktop
+      - install -Dm644 io.github.andr36oid.sdflasher.svg /app/share/icons/hicolor/scalable/apps/io.github.andr36oid.sdflasher.svg
+      - install -Dm644 io.github.andr36oid.sdflasher.metainfo.xml /app/share/metainfo/io.github.andr36oid.sdflasher.metainfo.xml
+      - mkdir -p /app/share/licenses/andr36oid-sdflasher
+      - cp -r licenses/. /app/share/licenses/andr36oid-sdflasher/
+    sources:
+      - type: dir
+        path: ../build/flatpak-input
+      - type: file
+        path: io.github.andr36oid.sdflasher.desktop
+      - type: file
+        path: io.github.andr36oid.sdflasher.svg
+      - type: file
+        path: io.github.andr36oid.sdflasher.metainfo.xml

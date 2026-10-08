@@ -1,0 +1,138 @@
+name: Build and release
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libwayland-dev libxkbcommon-dev libegl1-mesa-dev xorg-dev xvfb
+      - run: go vet ./...
+      - run: go test -race ./internal/layout ./internal/extfs ./internal/firmware ./internal/flash ./internal/catalog ./internal/jobs ./internal/platform
+      - run: xvfb-run -a go test ./internal/ui
+      - run: go test ./internal/layout -fuzz=FuzzRead -fuzztime=15s
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-22.04, target: linux, arch: amd64}
+          - {os: ubuntu-22.04-arm, target: linux, arch: arm64}
+          - {os: windows-2022, target: windows, arch: amd64, msystem: UCRT64, compiler: mingw-w64-ucrt-x86_64-gcc, cc: gcc}
+          - {os: windows-11-arm, target: windows, arch: arm64, msystem: CLANGARM64, compiler: mingw-w64-clang-aarch64-clang, cc: clang}
+          - {os: macos-15-intel, target: macos, arch: amd64}
+          - {os: macos-15, target: macos, arch: arm64}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Version
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "VERSION=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-dev.${GITHUB_SHA:0:8}" >> "$GITHUB_ENV"
+          fi
+      - name: Linux dependencies
+        if: matrix.target == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libgl1-mesa-dev libwayland-dev libxkbcommon-dev libegl1-mesa-dev xorg-dev flatpak flatpak-builder squashfs-tools desktop-file-utils
+      - uses: msys2/setup-msys2@v2
+        if: matrix.target == 'windows'
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          path-type: inherit
+          install: ${{ matrix.compiler }} python zip
+      - name: Build Unix
+        if: matrix.target != 'windows'
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '12.0'
+        run: bash scripts/build.sh
+      - name: Build Windows portable
+        if: matrix.target == 'windows'
+        shell: msys2 {0}
+        env:
+          CC: ${{ matrix.cc }}
+        run: |
+          bash scripts/build.sh
+          cd build
+          zip -r "../dist/andr36oid-sdflasher-${VERSION}-windows-${{ matrix.arch }}-portable.zip" andr36oid-sdflasher.exe andr36oid-sdflasher-helper.exe licenses
+      - name: Linux packages
+        if: matrix.target == 'linux'
+        run: bash scripts/package-linux.sh
+      - name: Flatpak
+        if: matrix.target == 'linux'
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
+          mkdir -p build/flatpak-input
+          cp build/andr36oid-sdflasher build/andr36oid-sdflasher-helper build/flatpak-input/
+          cp -r build/licenses build/flatpak-input/
+          flatpak-builder --user --force-clean --repo=build/flatpak-repo build/flatpak packaging/io.github.andr36oid.sdflasher.yml
+          flatpak build-bundle build/flatpak-repo "dist/andr36oid-sdflasher-${VERSION}-linux-${{ matrix.arch }}.flatpak" io.github.andr36oid.sdflasher
+      - name: macOS bundle
+        if: matrix.target == 'macos'
+        run: bash scripts/package-macos.sh
+      - name: Package checksums
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, pathlib
+          root = pathlib.Path('dist')
+          lines = []
+          for p in sorted(root.iterdir()):
+              if p.is_file():
+                  with p.open('rb') as f:
+                      h = hashlib.sha256()
+                      for chunk in iter(lambda: f.read(1048576), b''):
+                          h.update(chunk)
+                      lines.append(h.hexdigest() + '  ' + p.name)
+          (root / 'SHA256SUMS-${{ matrix.target }}-${{ matrix.arch }}').write_text('\n'.join(lines) + '\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdflasher-${{ matrix.target }}-${{ matrix.arch }}
+          path: dist/*
+          if-no-files-found: error
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require a release version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat dist/SHA256SUMS-* > dist/SHA256SUMS
+          rm dist/SHA256SUMS-*
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            gh release create "$TAG" dist/* --verify-tag --generate-notes --title "$TAG"
+          fi
