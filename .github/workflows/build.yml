@@ -102,7 +102,7 @@ jobs:
                       for chunk in iter(lambda: f.read(1048576), b''):
                           h.update(chunk)
                       lines.append(h.hexdigest() + '  ' + p.name)
-          (root / 'SHA256SUMS-${{ matrix.target }}-${{ matrix.arch }}').write_text('\n'.join(lines) + '\n')
+          (root / 'SHA256SUMS-${{ matrix.target }}-${{ matrix.arch }}').write_bytes(('\n'.join(lines) + '\n').encode('utf-8'))
           PY
       - uses: actions/upload-artifact@v4
         with:
