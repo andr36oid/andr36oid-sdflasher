@@ -2,7 +2,7 @@ package io.github.andr36oid.sdflasher;
 
 import android.content.Context;
 import android.hardware.usb.*;
-import io.github.andr36oid.mobile.Disk;
+import io.github.andr36oid.bindings.mobile.Disk;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

@@ -12,16 +12,15 @@ bash scripts/fetch-android-usb.sh
 mkdir -p build dist
 # One APK carries every ABI supported by the USB stack.
 gomobile bind -ldflags="-s -w -extldflags=-Wl,-z,max-page-size=16384,-z,common-page-size=16384" -target=android/arm64,android/arm,android/amd64,android/386 -androidapi 23 \
-  -javapkg io.github.andr36oid -o build/sdflasher-mobile.aar ./mobile
+  -javapkg io.github.andr36oid.bindings -o build/sdflasher-mobile.aar ./mobile
 python3 scripts/licenses.py
 python3 scripts/android-licenses.py
-variant=Debug
-suffix=debug
-if [[ -n "${ANDROID_KEYSTORE:-}" ]]; then variant=Release; suffix=release; fi
-android/gradlew -p android ":app:assemble$variant" :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintDebug
-cp "android/app/build/outputs/apk/${suffix}/app-${suffix}.apk" "dist/andr36oid-sdflasher-${VERSION:-development}-android-universal.apk"
+android/gradlew -p android :app:assembleRelease :app:assembleReleaseAndroidTest :app:testDebugUnitTest :app:lintRelease
+cp android/app/build/outputs/apk/release/app-release.apk "dist/andr36oid-sdflasher-${VERSION:-development}-android-universal.apk"
 apk="dist/andr36oid-sdflasher-${VERSION:-development}-android-universal.apk"
 "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --min-sdk-version 23 "$apk"
 "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 4 "$apk"
 python3 scripts/check-android-apk.py "$apk"
-(cd dist && sha256sum andr36oid-sdflasher-*-android-universal.apk > SHA256SUMS-android)
+cp android/app/build/outputs/mapping/release/mapping.txt "dist/andr36oid-sdflasher-${VERSION:-development}-android-mapping.txt"
+(cd dist && sha256sum andr36oid-sdflasher-*-android-universal.apk andr36oid-sdflasher-*-android-mapping.txt > SHA256SUMS-android)
+android/gradlew -p android -PtestBuildType=debug :app:assembleDebug :app:assembleDebugAndroidTest

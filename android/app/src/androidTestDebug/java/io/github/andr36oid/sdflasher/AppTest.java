@@ -10,7 +10,7 @@ import android.widget.TextView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
-import io.github.andr36oid.mobile.*;
+import io.github.andr36oid.bindings.mobile.*;
 import java.io.File;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;

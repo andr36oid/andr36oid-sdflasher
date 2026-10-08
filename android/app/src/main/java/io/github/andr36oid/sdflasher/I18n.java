@@ -2,7 +2,7 @@ package io.github.andr36oid.sdflasher;
 
 import android.content.Context;
 import android.os.Build;
-import io.github.andr36oid.mobile.Mobile;
+import io.github.andr36oid.bindings.mobile.Mobile;
 import java.util.Locale;
 
 final class I18n {

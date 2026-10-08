@@ -12,6 +12,7 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     buildFeatures { buildConfig true }
+    testBuildType project.findProperty('testBuildType') ?: 'release'
     signingConfigs {
         release {
             if (System.getenv('ANDROID_KEYSTORE')) {
@@ -24,7 +25,12 @@ android {
     }
     buildTypes {
         debug { applicationIdSuffix '.debug' }
-        release { minifyEnabled false; signingConfig signingConfigs.release }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig System.getenv('ANDROID_KEYSTORE') ? signingConfigs.release : signingConfigs.debug
+        }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     sourceSets.main.assets.srcDirs = ["${rootDir}/../build/android-assets"]
@@ -39,4 +45,5 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'androidx.test:rules:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestCompileOnly 'com.google.errorprone:error_prone_annotations:2.36.0'
 }

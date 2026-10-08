@@ -10,7 +10,7 @@ import android.os.*;
 import android.provider.OpenableColumns;
 import android.view.*;
 import android.widget.*;
-import io.github.andr36oid.mobile.Mobile;
+import io.github.andr36oid.bindings.mobile.Mobile;
 import java.io.*;
 import java.util.*;
 import org.json.*;

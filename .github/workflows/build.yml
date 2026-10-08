@@ -160,12 +160,12 @@ jobs:
           name: sdflasher-android-universal
           path: dist/*
           if-no-files-found: error
-      - name: Build emulator test inputs
-        run: android/gradlew -p android :app:assembleDebug :app:assembleDebugAndroidTest
       - uses: actions/upload-artifact@v4
         with:
           name: android-test-inputs
           path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/apk/androidTest/release/*.apk
             android/app/build/outputs/apk/debug/*.apk
             android/app/build/outputs/apk/androidTest/debug/*.apk
           if-no-files-found: error
@@ -195,15 +195,19 @@ jobs:
           target: default
           disable-animations: true
           script: |
+            adb install apks/release/app-release.apk
+            adb install apks/androidTest/release/app-release-androidTest.apk
+            adb shell am instrument -w io.github.andr36oid.sdflasher.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation.txt
+            grep -Fq 'OK (4 tests)' instrumentation.txt
             adb install apks/debug/app-debug.apk
             adb install apks/androidTest/debug/app-debug-androidTest.apk
-            adb shell am instrument -w io.github.andr36oid.sdflasher.debug.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation.txt
-            grep -q 'OK (' instrumentation.txt
+            adb shell am instrument -w io.github.andr36oid.sdflasher.debug.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation-debug.txt
+            grep -Fq 'OK (4 tests)' instrumentation-debug.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-smoke-${{ matrix.api }}
-          path: instrumentation.txt
+          path: instrumentation*.txt
   release:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [build, android, android-smoke]
