@@ -14,6 +14,7 @@ import (
 	"github.com/andr36oid/andr36oid-sdflasher/internal/flash"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/jobs"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/platform"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -145,10 +146,11 @@ func (s *screen) build() {
 	s.action.Disable()
 	s.progress = widget.NewProgressBar()
 	s.progress.Hide()
-	s.home = container.NewVBox(widget.NewLabelWithStyle("Set up or update your andr36oid card", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), wrapped("Choose your release and console. We’ll prepare the card and check the result."), widget.NewSeparator(), widget.NewLabelWithStyle("1. Release", 0, fyne.TextStyle{Bold: true}), container.NewHBox(s.online, s.local), s.releaseLabel, s.progress, widget.NewLabelWithStyle("2. Console and screen", 0, fyne.TextStyle{Bold: true}), s.console, s.profileSelect, widget.NewButton("I don’t know my board or panel", func() {
+	body := container.NewVBox(widget.NewLabelWithStyle("Set up or update your andr36oid card", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), wrapped("Choose your release and console. We’ll prepare the card and check the result."), widget.NewSeparator(), widget.NewLabelWithStyle("1. Release", 0, fyne.TextStyle{Bold: true}), container.NewHBox(s.online, s.local), s.releaseLabel, s.progress, widget.NewLabelWithStyle("2. Console and screen", 0, fyne.TextStyle{Bold: true}), s.console, s.profileSelect, widget.NewButton("I don’t know my board or panel", func() {
 		dialog.ShowInformation("Finding your board and panel", "An existing andr36oid card may identify its selected profile. For a new card, use your console’s board markings and the panel information from its supplier. Similar-looking R36S consoles can have different wiring. Choose the board family first; a panel number alone is not enough. If your console is missing here, this release does not ship its profile.", s.win)
-	}), advanced, widget.NewLabelWithStyle("3. microSD card", 0, fyne.TextStyle{Bold: true}), container.NewBorder(nil, nil, nil, s.refresh, s.driveSelect), s.cardLabel, s.mode, s.noROMs, wrapped("Unchecked: reserve 16 GiB for Android and use the remaining space for a games partition readable on your computer. Updates keep the existing arrangement."), s.help, s.action, widget.NewButton("Restore an interrupted update…", s.recover), widget.NewLabel("GPLv3 · "+Version))
-	s.win.SetContent(container.NewVScroll(s.home))
+	}), advanced, widget.NewLabelWithStyle("3. microSD card", 0, fyne.TextStyle{Bold: true}), container.NewBorder(nil, nil, nil, s.refresh, s.driveSelect), s.cardLabel, s.mode, s.noROMs, wrapped("Unchecked: reserve 16 GiB for Android and use the remaining space for a games partition readable on your computer. Updates keep the existing arrangement."))
+	s.home = container.NewBorder(nil, container.NewVBox(s.help, s.action, container.NewHBox(widget.NewButton("Restore an interrupted update…", s.recover), widget.NewLabel("GPLv3 · "+Version))), nil, nil, container.NewVScroll(body))
+	s.win.SetContent(s.home)
 	s.listDrives()
 }
 func (s *screen) ready() {
@@ -226,6 +228,9 @@ func (s *screen) loadImage(p string) {
 		}
 		if e == nil {
 			im, e = firmware.Inspect(ctx, staged, s.progressFn())
+		}
+		if e != nil && staged != "" && staged != p {
+			os.Remove(staged)
 		}
 		fyne.Do(func() {
 			s.progress.Hide()
@@ -464,7 +469,7 @@ func (s *screen) write(p *flash.Plan) {
 	bar := widget.NewProgressBar()
 	details := wrapped("Each block summarizes a region of the card. Preserved regions are never written.")
 	back := widget.NewButton("Back to setup", func() {
-		s.win.SetContent(container.NewVScroll(s.home))
+		s.win.SetContent(s.home)
 		s.card = nil
 		s.drive = nil
 		s.driveSelect.ClearSelected()
