@@ -197,6 +197,13 @@ func Run(req Request, onProgress func(flash.Progress)) (Result, error) {
 	if e != nil {
 		return Result{}, e
 	}
+	// Keep the recovery directory owned by the desktop user so its manifest
+	// remains selectable after the privileged helper has saved the backup.
+	if req.Action == "write" && req.Mode == "update" {
+		if e = os.Mkdir(filepath.Join(dir, "recovery"), 0700); e != nil {
+			return Result{}, e
+		}
+	}
 	exe, e := helper(dir)
 	if e != nil {
 		return Result{}, e
