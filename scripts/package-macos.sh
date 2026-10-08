@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 version=${VERSION:-0.0.0-dev}
+bundle_version=${version#v}
+bundle_version=${bundle_version%%-*}
 arch=$(go env GOARCH)
 bundle='build/andr36oid SD Flasher.app'
 mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
@@ -14,7 +16,8 @@ cat > "$bundle/Contents/Info.plist" <<PLIST
 <key>CFBundleIdentifier</key><string>io.github.andr36oid.sdflasher</string>
 <key>CFBundleName</key><string>andr36oid SD Flasher</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>${version#v}</string>
+<key>CFBundleShortVersionString</key><string>$bundle_version</string>
+<key>CFBundleVersion</key><string>$bundle_version</string>
 <key>NSHighResolutionCapable</key><true/>
 <key>LSMinimumSystemVersion</key><string>12.0</string>
 <key>NSRemovableVolumesUsageDescription</key><string>Install and update your andr36oid microSD card.</string>

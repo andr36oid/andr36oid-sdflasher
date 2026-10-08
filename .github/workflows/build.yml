@@ -42,7 +42,7 @@ jobs:
       - name: Version
         shell: bash
         run: |
-          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
             echo "VERSION=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
           else
             echo "VERSION=0.0.0-dev.${GITHUB_SHA:0:8}" >> "$GITHUB_ENV"
@@ -120,7 +120,7 @@ jobs:
       - name: Require a release version
         env:
           TAG: ${{ github.ref_name }}
-        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+        run: '[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]'
       - uses: actions/download-artifact@v4
         with:
           path: dist
@@ -132,8 +132,13 @@ jobs:
         run: |
           cat dist/SHA256SUMS-* > dist/SHA256SUMS
           rm dist/SHA256SUMS-*
+          (cd dist && sha256sum --check SHA256SUMS)
+          flags=()
+          if [[ "$TAG" == *-* ]]; then
+            flags+=(--prerelease --latest=false)
+          fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
           else
-            gh release create "$TAG" dist/* --verify-tag --generate-notes --title "$TAG"
+            gh release create "$TAG" dist/* --verify-tag --generate-notes --title "$TAG" "${flags[@]}"
           fi
