@@ -3,9 +3,11 @@ runtime: org.freedesktop.Platform
 runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
 command: andr36oid-sdflasher
+appstream-compose: false
 finish-args:
   - --share=ipc
-  - --socket=x11
+  - --socket=fallback-x11
+  - --socket=wayland
   - --device=dri
   - --share=network
   - --filesystem=host
@@ -21,6 +23,7 @@ modules:
       - install -Dm644 io.github.andr36oid.sdflasher.metainfo.xml /app/share/metainfo/io.github.andr36oid.sdflasher.metainfo.xml
       - mkdir -p /app/share/licenses/andr36oid-sdflasher
       - cp -r licenses/. /app/share/licenses/andr36oid-sdflasher/
+      - appstreamcli compose --components=${FLATPAK_ID} --prefix=/ --origin=${FLATPAK_ID} --result-root=${FLATPAK_DEST} --data-dir=${FLATPAK_DEST}/share/app-info/xmls ${FLATPAK_DEST}
     sources:
       - type: dir
         path: ../build/flatpak-input

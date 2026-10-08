@@ -15,17 +15,18 @@ Package: andr36oid-sdflasher
 Version: $version
 Architecture: $arch
 Maintainer: andr36oid <0@kenny.cat>
-Depends: libc6 (>= 2.35), libgl1, libx11-6, libxcursor1, libxrandr2, libxinerama1, libxi6, libxxf86vm1, policykit-1, util-linux
+Depends: libc6 (>= 2.35), libgl1, libegl1, libwayland-client0, libxkbcommon0, libx11-6, libxcursor1, libxrandr2, libxinerama1, libxi6, libxxf86vm1, policykit-1, util-linux
 Section: utils
 Priority: optional
 Description: Native microSD installer and updater for andr36oid
 CONTROL
 dpkg-deb --root-owner-group --build "$pkg" "dist/andr36oid-sdflasher-${version}-linux-${arch}.deb"
 appdir=build/AppDir
-mkdir -p "$appdir/usr/bin" "$appdir/usr/share/licenses/andr36oid-sdflasher"
+mkdir -p "$appdir/usr/bin" "$appdir/usr/share/licenses/andr36oid-sdflasher" "$appdir/usr/share/metainfo"
+cp packaging/*.metainfo.xml "$appdir/usr/share/metainfo/"
 cp build/andr36oid-sdflasher-helper "$appdir/usr/bin/"
 cp -r build/licenses/. "$appdir/usr/share/licenses/andr36oid-sdflasher/"
 curl --fail --location --retry 3 "https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-${apparch}.AppImage" -o build/linuxdeploy
 printf '%s  %s\n' "$deploysum" build/linuxdeploy | sha256sum --check
 chmod +x build/linuxdeploy
-APPIMAGE_EXTRACT_AND_RUN=1 OUTPUT="dist/andr36oid-sdflasher-${version}-linux-${arch}.AppImage" build/linuxdeploy --appdir "$appdir" --executable build/andr36oid-sdflasher --desktop-file packaging/io.github.andr36oid.sdflasher.desktop --icon-file packaging/io.github.andr36oid.sdflasher.svg --output appimage
+APPIMAGE_EXTRACT_AND_RUN=1 LDAI_OUTPUT="dist/andr36oid-sdflasher-${version}-linux-${arch}.AppImage" build/linuxdeploy --appdir "$appdir" --executable build/andr36oid-sdflasher --desktop-file packaging/io.github.andr36oid.sdflasher.desktop --icon-file packaging/io.github.andr36oid.sdflasher.svg --output appimage

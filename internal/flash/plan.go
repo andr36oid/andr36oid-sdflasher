@@ -135,6 +135,18 @@ func InspectCard(f *os.File, size int64) (Card, error) {
 			break
 		}
 	}
+
+	if c.Profile == "" {
+		if saved, e := firmware.ReadFile(boot, "/andr36oid-profile.txt", 4096); e == nil {
+			id := strings.TrimSpace(string(saved))
+			for _, p := range profiles {
+				if p.ID == id {
+					c.Profile = id
+					break
+				}
+			}
+		}
+	}
 	_, roms := t.Find("EASYROMS")
 	c.NoROMs = !roms
 	c.Table = t
