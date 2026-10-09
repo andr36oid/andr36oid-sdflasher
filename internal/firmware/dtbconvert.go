@@ -126,6 +126,16 @@ func ConvertCustom(im *Image, custom string) (*Conversion, error) {
 	return convertWith(fs, im, input)
 }
 
+// uBootNames are all names U-Boot may load its screen DTB from: the
+// ArkOS-style U-Boot reads rg351*-kernel.dtb, the andr36oid U-Boot reads
+// rg351*-uboot.dtb. The converted panel must win under every name, or
+// U-Boot would light the screen with the profile's own panel.
+// (Same list as UBootDTBNames on the uboot-dtb-names branch.)
+var uBootNames = []string{
+	"rg351mp-kernel.dtb", "rg351p-kernel.dtb", "rg351v-kernel.dtb",
+	"rg351mp-uboot.dtb", "rg351p-uboot.dtb", "rg351v-uboot.dtb",
+}
+
 // writeConversion writes the boot logo DTBs and the backup folder after the
 // profile's own files, so the converted panel wins.
 func writeConversion(fs filesystem.FileSystem, write func(string, []byte) error, c *Conversion, selected *Profile, custom string) error {
@@ -155,7 +165,7 @@ func writeConversion(fs filesystem.FileSystem, write func(string, []byte) error,
 		}
 	}
 	if c.UBoot != nil {
-		for _, alias := range []string{"rg351mp-kernel.dtb", "rg351p-kernel.dtb", "rg351v-kernel.dtb"} {
+		for _, alias := range uBootNames {
 			if e := write(alias, c.UBoot); e != nil {
 				return e
 			}
