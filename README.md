@@ -1,0 +1,20 @@
+# warn
+as of right now, no publically available release of andr36oid is compatible with this tool. the next release will require using this tool if you are updating. if you are flashing a fresh sd card, this tool will make the process easier.
+
+# what this
+The next version of andr36oid will introduce a new partition layout. New users can flash with a tool like Rufus, but existing SD cards need to be repartitioned.
+
+An ordinary flash would render the system unbootable or with data loss. This tool can alter the partition table of an existing install of andr36oid to the new format, as well as flesh any other SD card with our image.
+
+The new partitioning layout enables two things: Project Treble compatibility (and thereby GSIs), Android versions greater than 11 (not implemented or tested to date), and noticeably faster bootup time.
+
+## how use
+Go to GitHub releases, and download the binary for your platform. You can use Windows, Linux, macOS and Android.
+
+You do not need to download the andr36oid image. The flash tool will download it from GitHub for you (you can manually specify one if required).
+
+To update to future releases of andr36oid, simply run the flash tool again.
+
+## thx
+to the Fyne Framework project for Go for multiplatform GUI
+to EtchDroid for the logic to flash USB devices on unrooted phones
