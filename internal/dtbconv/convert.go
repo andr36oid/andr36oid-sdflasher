@@ -177,6 +177,7 @@ var Skipped = []string{
 	"Debug console settings (fiq-debugger speed, IRQ mode). EE bases already use UART5 like the stock firmware.",
 	"eMMC (dwmmc@ff390000): andr36oid runs from the SD card.",
 	"Higher charger current or voltage limits than the family base: the base values are kept. Lower ones are copied.",
+	"A lower battery shutdown voltage than the family base: the base value is kept.",
 	"Headphone detect polarity: the 4.4 sound driver reads it the other way round; our base value works with our driver.",
 	"LDO1-3, LDO5-7, DCDC3/4 and BOOST settings: taken from the family base. Only LDO4, LDO8 (when it feeds the screen) and a lower LDO9 are copied.",
 	"Panel compatible string: our panel driver binds through simple-panel-dsi either way.",

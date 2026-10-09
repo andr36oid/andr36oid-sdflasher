@@ -672,11 +672,18 @@ func (c *conv) battery() error {
 		c.warn("The battery values in this DTB look wrong; kept the board family's values.")
 		return nil
 	}
+	baseOff, _ := ob.U32("power_off_thresd")
 	ob.SetCells("ocv_table", ocv...)
 	for _, p := range []string{"design_capacity", "design_qmax", "bat_res", "power_off_thresd", "zero_algorithm_vol"} {
 		if v, ok := ib.U32(p); ok {
 			ob.SetU32(p, v)
 		}
+	}
+	// a lower shutdown voltage than our base drains the cell deeper; keep ours
+	if off < baseOff {
+		ob.SetU32("power_off_thresd", baseOff)
+		c.note("Battery: %d mAh and charge table copied. Shutdown voltage kept at %d mV (the DTB says %d mV).", cap, baseOff, off)
+		return nil
 	}
 	c.note("Battery: %d mAh, charge table and empty voltage (%d mV) copied.", cap, off)
 	return nil
@@ -1026,7 +1033,11 @@ func (c *conv) rk915(is, os, wl *Node) error {
 	for _, p := range []string{"supports-sdio", "supports-rk915", "keep-power-in-suspend"} {
 		os.Set(p, nil)
 	}
-	// no-sd / no-mmc are left out, as in our R36 Ultra DTB
+	for _, p := range []string{"no-sd", "no-mmc"} {
+		if is.Has(p) {
+			os.Set(p, nil)
+		}
+	}
 	c.note("Wi-Fi: RK915 on the second SD controller (power %s, wake %s). Needs a kernel with the RK915 driver.", pwr.Name(), wake.Name())
 	return nil
 }
