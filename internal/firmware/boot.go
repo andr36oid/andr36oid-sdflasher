@@ -15,7 +15,7 @@ import (
 
 const CustomWarning = "Custom DTBs must be built specifically for andr36oid. DTBs from other custom firmwares are unlikely to work."
 
-func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir string) (string, error) {
+func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir string, opts ...BootOptions) (string, error) {
 	src, e := os.Open(im.Path)
 	if e != nil {
 		return "", e
@@ -39,6 +39,19 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 	fs, e := fat32.Read(file.New(out, false), p.Size(), 0, 512)
 	if e != nil {
 		return "", e
+	}
+	var conv *Conversion
+	if custom != "" && len(opts) > 0 && opts[0].ConvertDTB {
+		input, e := readCustom(custom)
+		if e != nil {
+			return "", e
+		}
+		if conv, e = convertWith(fs, im, input); e != nil {
+			return "", e
+		}
+		if conv.Profile != "" {
+			profile = conv.Profile
+		}
 	}
 	var selected *Profile
 	for i := range im.Profiles {
@@ -89,20 +102,11 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 	if e != nil {
 		return "", e
 	}
-	if custom != "" {
-		st, e := os.Stat(custom)
-		if e != nil {
+	if conv != nil {
+		dtb = conv.Kernel
+	} else if custom != "" {
+		if dtb, e = readCustom(custom); e != nil {
 			return "", e
-		}
-		if !st.Mode().IsRegular() || st.Size() > 4<<20 {
-			return "", errors.New("custom DTB is too large or not a regular file")
-		}
-		dtb, e = os.ReadFile(custom)
-		if e != nil {
-			return "", e
-		}
-		if !validDTB(dtb) {
-			return "", errors.New("custom file is not a valid flattened device tree")
 		}
 	}
 	if e = write(target, dtb); e != nil {
@@ -122,6 +126,11 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 					return "", e
 				}
 			}
+		}
+	}
+	if conv != nil {
+		if e = writeConversion(fs, write, conv, selected, custom); e != nil {
+			return "", e
 		}
 	}
 	// The installation resizer formats userdata. It must never run on an update.
