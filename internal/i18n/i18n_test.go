@@ -16,7 +16,7 @@ func TestLocaleSelection(t *testing.T) {
 	}
 }
 func TestCatalogsComplete(t *testing.T) {
-	format := regexp.MustCompile(`%[ds]`)
+	format := regexp.MustCompile(`%[-+# 0-9.]*[a-zA-Z%]`)
 	for _, l := range Languages {
 		m := catalogs[l.Code]
 		if len(m) != len(catalogs["en"]) {

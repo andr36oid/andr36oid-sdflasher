@@ -10,7 +10,8 @@ import json,shutil,hashlib,sys
 root=Path(sys.argv[1])
 alltext=''.join(Path('internal/i18n/locales/'+code+'.json').read_text() for code in ['en','de','ru','uk','es','pt','pt-BR','hi','ko','zh-Hans'])+'EnglishDeutschРусскийУкраїнськаEspañolPortuguêsPortuguês brasileiroहिन्दी한국어简体中文'
 remaining=set(map(ord,alltext))|set(range(32,256))
-source={'Latin':{c for c in remaining if c<0x900},'Devanagari':{c for c in remaining if 0x900<=c<0xa00},'Korean':{c for c in remaining if 0xac00<=c<=0xd7af}}
+# General Punctuation (’ … — and so on) comes from Noto Sans too; the CJK font draws it full width.
+source={'Latin':{c for c in remaining if c<0x900 or 0x2000<=c<0x2070},'Devanagari':{c for c in remaining if 0x900<=c<0xa00},'Korean':{c for c in remaining if 0xac00<=c<=0xd7af}}
 source['CJK']=remaining-set.union(*source.values())
 for weight,label in [(400,'Regular'),(700,'Bold')]:
     parts=[]
