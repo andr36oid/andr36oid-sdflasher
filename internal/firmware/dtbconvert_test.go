@@ -59,7 +59,7 @@ func fakeImage(t *testing.T, dir string) *Image {
 	}
 	b := dtbconv.EmbeddedBases()
 	files := map[string][]byte{
-		"boot.ini-android": []byte("load mmc 1:1 ${dtb_loadaddr} rk3326-r36s-android.dtb\nload mmc 1:1 ${ramdisk_addr_r} ramdisk.uimg\n"),
+		"boot.ini-android":                                   []byte("load mmc 1:1 ${dtb_loadaddr} rk3326-r36s-android.dtb\nload mmc 1:1 ${ramdisk_addr_r} ramdisk.uimg\n"),
 		"Panels/Panel4/rk3326-r36s-android.dtb":              b.Genuine,
 		"Panels/Panel4/rg351mp-kernel.dtb":                   b.UBoot,
 		"Experimental/EE-G80-Panel8/rk3326-r36s-android.dtb": b.EE,
