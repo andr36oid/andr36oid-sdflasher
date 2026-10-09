@@ -27,6 +27,7 @@ type Request struct {
 	NoROMs          bool           `json:"no_roms,omitempty"`
 	CustomDTB       string         `json:"custom_dtb,omitempty"`
 	CustomAccepted  bool           `json:"custom_accepted,omitempty"`
+	ConvertDTB      bool           `json:"convert_dtb,omitempty"`
 }
 type Result struct {
 	Done     bool            `json:"done"`
@@ -138,11 +139,20 @@ func Worker(job string) error {
 		if card.Fingerprint != req.CardFingerprint {
 			return errors.New("card changed after inspection; select it again")
 		}
+		if req.ConvertDTB && req.CustomDTB != "" {
+			conv, e := firmware.ConvertCustom(im, req.CustomDTB)
+			if e != nil {
+				return e
+			}
+			if conv.Profile != "" {
+				req.Profile = conv.Profile
+			}
+		}
 		p, e := flash.Build(im, card, d.Size, req.Mode, req.Profile, req.NoROMs)
 		if e != nil {
 			return e
 		}
-		boot, e := firmware.PrepareBoot(im, req.Profile, p.NoROMs, req.Mode == "update", req.CustomDTB, dir)
+		boot, e := firmware.PrepareBoot(im, req.Profile, p.NoROMs, req.Mode == "update", req.CustomDTB, dir, firmware.BootOptions{ConvertDTB: req.ConvertDTB})
 		if e != nil {
 			return e
 		}

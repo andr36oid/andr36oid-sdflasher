@@ -154,6 +154,7 @@ type options struct {
 	Identity       string `json:"identity"`
 	Custom         string `json:"custom"`
 	CustomAccepted bool   `json:"custom_accepted"`
+	ConvertDTB     bool   `json:"convert_dtb"`
 }
 
 func (s *Session) plan(d *usbDisk, input string) (*flash.Plan, options, error) {
@@ -176,6 +177,15 @@ func (s *Session) plan(d *usbDisk, input string) (*flash.Plan, options, error) {
 	}
 	if opts.Custom != "" && !opts.CustomAccepted {
 		return nil, opts, errors.New(firmware.CustomWarning)
+	}
+	if opts.ConvertDTB && opts.Custom != "" {
+		conv, e := firmware.ConvertCustom(s.image, opts.Custom)
+		if e != nil {
+			return nil, opts, e
+		}
+		if conv.Profile != "" {
+			opts.Profile = conv.Profile
+		}
 	}
 	p, e := flash.Build(s.image, card, d.size, opts.Mode, opts.Profile, opts.NoROMs)
 	return p, opts, e
@@ -262,7 +272,7 @@ func (s *Session) Write(d Disk, input string, observer Observer) (string, error)
 	if e != nil {
 		return "", e
 	}
-	boot, e := firmware.PrepareBoot(s.image, opts.Profile, p.NoROMs, opts.Mode == "update", opts.Custom, dir)
+	boot, e := firmware.PrepareBoot(s.image, opts.Profile, p.NoROMs, opts.Mode == "update", opts.Custom, dir, firmware.BootOptions{ConvertDTB: opts.ConvertDTB})
 	if e != nil {
 		return "", e
 	}
@@ -337,6 +347,32 @@ func (s *Session) Restore(d Disk, dir string, observer Observer) error {
 	return flash.RestoreBackup(context.Background(), dev, filepath.Join(dir, "recovery"), dev.size)
 }
 func CustomWarning() string { return firmware.CustomWarning }
+
+type conversion struct {
+	Family   string   `json:"family"`
+	Profile  string   `json:"profile"`
+	Model    string   `json:"model"`
+	Width    uint32   `json:"width"`
+	Height   uint32   `json:"height"`
+	Warnings []string `json:"warnings"`
+	Report   string   `json:"report"`
+}
+
+// ConvertDTB checks the console's own (ArkOS, dArkOS or stock EmuELEC) DTB
+// at path against the chosen release and says what the conversion would do.
+// A refusal comes back as an error with a plain-language reason.
+func (s *Session) ConvertDTB(path string) (string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.image == nil {
+		return "", errors.New("choose a Treble release first")
+	}
+	c, e := firmware.ConvertCustom(s.image, path)
+	if e != nil {
+		return "", e
+	}
+	return encode(conversion{Family: c.Family.Label(), Profile: c.Profile, Model: c.Model, Width: c.Width, Height: c.Height, Warnings: append([]string{}, c.Warnings...), Report: c.Report()})
+}
 
 func Translate(locale, key string) string { return i18n.Text(locale, key) }
 func ResolveLocale(locale string) string  { return i18n.Resolve(locale) }
