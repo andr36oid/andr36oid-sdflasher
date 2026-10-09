@@ -509,7 +509,7 @@ func (s *screen) confirm() {
 	if s.updating {
 		mode = "update"
 	}
-	p, e := flash.Build(s.im, *s.card, s.drive.Size, mode, s.profile, s.noROMs.Checked)
+	p, e := flash.Build(s.im, *s.card, s.drive.Size, mode, s.profile, s.noROMs.Checked, 0)
 	if e != nil {
 		s.showError(e)
 		return

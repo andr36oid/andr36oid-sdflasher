@@ -63,11 +63,11 @@ func TestReleasedGPTMigration(t *testing.T) {
 	if e != nil || !info.Installed {
 		t.Fatalf("inspect: %v %+v", e, info)
 	}
-	p, e := Build(im, info, size, "update", "Panels/Panel4", false)
+	p, e := Build(im, info, size, "update", "Panels/Panel4", false, 0)
 	if e != nil {
 		t.Fatal(e)
 	}
-	boot, e := firmware.PrepareBoot(im, p.Profile, false, true, "", dir)
+	boot, e := firmware.PrepareBoot(im, p.Profile, false, true, 0, "", dir)
 	if e != nil {
 		t.Fatal(e)
 	}

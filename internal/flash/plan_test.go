@@ -49,7 +49,7 @@ func sample(t *testing.T) (*firmware.Image, Card, *os.File, string) {
 }
 func TestUpdatePreservesUserDataGamesAndMetadata(t *testing.T) {
 	im, card, dst, boot := sample(t)
-	p, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false)
+	p, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -95,7 +95,7 @@ func (f *faulty) WriteAt(b []byte, off int64) (int, error) {
 }
 func TestInterruptedUpdateRestoresOriginal(t *testing.T) {
 	im, card, dst, boot := sample(t)
-	p, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false)
+	p, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -113,7 +113,7 @@ func TestPreflightRejectsChangedImageAndCardWithoutWrites(t *testing.T) {
 	for _, kind := range []string{"image", "card", "overlap"} {
 		t.Run(kind, func(t *testing.T) {
 			im, card, dst, boot := sample(t)
-			p, _ := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false)
+			p, _ := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0)
 			switch kind {
 			case "image":
 				f, _ := os.OpenFile(im.Path, os.O_RDWR, 0)
@@ -145,7 +145,7 @@ func TestMigrationProtectsMBRDataAndRefusesNoTailRoom(t *testing.T) {
 		}
 	}
 	card.Table.Parts = old
-	if _, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false); e != nil {
+	if _, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0); e != nil {
 		t.Fatal(e)
 	}
 	for i := range card.Table.Parts {
@@ -153,7 +153,7 @@ func TestMigrationProtectsMBRDataAndRefusesNoTailRoom(t *testing.T) {
 			card.Table.Parts[i].End = uint64(card.Table.Size/512) - 1
 		}
 	}
-	if _, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false); e == nil {
+	if _, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0); e == nil {
 		t.Fatal("accepted GPT backup over userdata")
 	}
 }
@@ -168,5 +168,39 @@ func TestWriteGuardRejectsWritesOutsidePlan(t *testing.T) {
 	}
 	if _, e := g.WriteAt(make([]byte, 512), 1024); e != nil {
 		t.Fatal(e)
+	}
+}
+func TestInstallSizesFollowTheResizer(t *testing.T) {
+	im, card, _, _ := sample(t)
+	const g = int64(1000 * 1000 * 1000)
+	cases := []struct {
+		size   int64
+		noROMs bool
+		want   int
+		ok     bool
+	}{
+		{16 * g, false, 0, true},  // was refused under 20 GiB
+		{8 * g, false, 0, false},  // no room for games
+		{8 * g, true, 0, true},    // all for Android
+		{64 * g, false, 32, true}, // chosen size
+		{64 * g, false, 100, false},
+		{64 * g, true, 32, true}, // size ignored with all for Android
+	}
+	for _, c := range cases {
+		p, e := Build(im, card, c.size, "install", "Panels/Panel4", c.noROMs, c.want)
+		if (e == nil) != c.ok {
+			t.Errorf("%d %v %d: error %v", c.size, c.noROMs, c.want, e)
+			continue
+		}
+		if e == nil && c.noROMs && p.UserdataGiB != 0 {
+			t.Errorf("%d: size kept with all storage for Android", c.size)
+		}
+	}
+	if _, e := Build(im, card, 64*g, "install", "Panels/Panel4", false, -1); e == nil {
+		t.Error("negative size accepted")
+	}
+	p, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 32)
+	if e != nil || p.UserdataGiB != 0 {
+		t.Errorf("update kept a size: %v %v", e, p)
 	}
 }
