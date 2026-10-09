@@ -39,6 +39,7 @@ type screen struct {
 	profile                             string
 	custom                              string
 	customAccepted                      bool
+	convert                             bool // custom is the console's own DTB, converted while writing
 	busy                                bool
 	releaseLabel, cardLabel, help       *widget.Label
 	console, profileSelect, driveSelect *widget.Select
@@ -151,6 +152,7 @@ func (s *screen) build() {
 	clear := widget.NewButton(s.t("Use shipped DTB"), func() {
 		s.custom = ""
 		s.customAccepted = false
+		s.convert = false
 		s.customLabel.SetText(s.t("Use the DTB shipped with the selected profile."))
 	})
 	advanced := widget.NewAccordion(widget.NewAccordionItem(s.t("Advanced: custom DTB"), container.NewVBox(wrapped(s.t(firmware.CustomWarning)), s.customLabel, container.NewHBox(custom, clear))))
@@ -161,7 +163,7 @@ func (s *screen) build() {
 	s.progress.Hide()
 	body := container.NewVBox(widget.NewLabelWithStyle(s.t("Set up or update your andr36oid card"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), wrapped(s.t("Choose your release and console. We’ll prepare the card and check the result.")), widget.NewSeparator(), widget.NewLabelWithStyle(s.t("1. Release"), 0, fyne.TextStyle{Bold: true}), container.NewHBox(s.online, s.local), s.releaseLabel, s.progress, widget.NewLabelWithStyle(s.t("2. Console and screen"), 0, fyne.TextStyle{Bold: true}), s.console, s.profileSelect, widget.NewButton(s.t("I don’t know my board or panel"), func() {
 		s.info(s.t("Finding your board and panel"), s.t("An existing andr36oid card may identify its selected profile. For a new card, use your console’s board markings and the panel information from its supplier. Similar-looking R36S consoles can have different wiring. Choose the board family first; a panel number alone is not enough. If your console is missing here, this release does not ship its profile."), s.win)
-	}), advanced, widget.NewLabelWithStyle(s.t("3. microSD card"), 0, fyne.TextStyle{Bold: true}), container.NewBorder(nil, nil, nil, s.refresh, s.driveSelect), s.cardLabel, s.mode, s.noROMs, wrapped(s.t("Unchecked: reserve 16 GiB for Android and use the remaining space for a games partition readable on your computer. Updates keep the existing arrangement.")))
+	}), widget.NewButton(s.t(ownDTBButton), s.chooseOwnDTB), advanced, widget.NewLabelWithStyle(s.t("3. microSD card"), 0, fyne.TextStyle{Bold: true}), container.NewBorder(nil, nil, nil, s.refresh, s.driveSelect), s.cardLabel, s.mode, s.noROMs, wrapped(s.t("Unchecked: reserve 16 GiB for Android and use the remaining space for a games partition readable on your computer. Updates keep the existing arrangement.")))
 	s.language = widget.NewButton(s.languageName(), s.chooseLanguage)
 	s.updateBanner = container.NewVBox()
 	s.renderAppUpdate()
@@ -175,7 +177,9 @@ func (s *screen) build() {
 	if oldUpdate {
 		s.mode.SetSelected(s.t("Update an existing installation"))
 	}
-	if s.custom != "" {
+	if s.convert {
+		s.customLabel.SetText(s.t(ownDTBLabel, filepath.Base(s.custom)))
+	} else if s.custom != "" {
 		s.customLabel.SetText(s.t("Custom Android DTB") + ": " + filepath.Base(s.custom))
 	}
 	s.populateDrives(false)
@@ -245,6 +249,7 @@ func (s *screen) loadImage(p string) {
 	s.profile = ""
 	s.custom = ""
 	s.customAccepted = false
+	s.convert = false
 	s.customLabel.SetText(s.t("Use the DTB shipped with the selected profile."))
 	s.releaseLabel.SetText(s.t("Checking the release image…"))
 	s.progress.SetValue(0)
@@ -439,6 +444,7 @@ func (s *screen) chooseCustom() {
 			s.custom = r.URI().Path()
 			r.Close()
 			s.customAccepted = true
+			s.convert = false
 			s.customLabel.SetText(s.t("Custom Android DTB") + ": " + filepath.Base(s.custom))
 		}, s.win)
 		d.SetFilter(storage.NewExtensionFileFilter([]string{".dtb"}))
@@ -520,7 +526,9 @@ func (s *screen) confirm() {
 		title = s.t("Update this card?")
 		msg = s.drive.Label() + "\n\n" + s.t("BOOT, system, and vendor will be updated together. The dedicated cache will be cleared. Userdata and games stay in place. A recovery backup will be saved before writing.")
 	}
-	if s.custom != "" {
+	if s.convert {
+		msg += "\n\n" + s.t(ownDTBWarning)
+	} else if s.custom != "" {
 		msg += "\n\n" + s.t(firmware.CustomWarning)
 	}
 	s.confirmDialog(title, msg, func(ok bool) {
@@ -546,7 +554,7 @@ func (s *screen) write(p *flash.Plan) {
 	})
 	back.Disable()
 	s.win.SetContent(container.NewPadded(container.NewVBox(widget.NewLabelWithStyle(s.t("Writing your andr36oid card"), 0, fyne.TextStyle{Bold: true}), widget.NewLabel(s.drive.Label()), m.img, legend(s.locale), phase, bar, details, back)))
-	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, CustomDTB: s.custom, CustomAccepted: s.customAccepted}
+	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert}
 	go func() {
 		result, e := jobs.Run(req, func(p flash.Progress) {
 			fyne.Do(func() {
