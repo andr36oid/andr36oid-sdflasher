@@ -87,3 +87,25 @@ func TestStepsNeedWhatComesBefore(t *testing.T) {
 		t.Fatal("new install with everything chosen must be writable")
 	}
 }
+
+// Consoles with a single profile (R46H, R50S from BOOT/Devices) are their
+// own console entry and get their profile at once, not marked experimental.
+func TestSingleProfileConsolePicksItsProfile(t *testing.T) {
+	a := test.NewApp()
+	defer a.Quit()
+	w := a.NewWindow("test")
+	defer w.Close()
+	s := &screen{win: w, locale: "en", im: &firmware.Image{Profiles: []firmware.Profile{
+		{ID: "Panels/Panel4", Name: "R36S — Panel 4", Console: "R36S"},
+		{ID: "Devices/R46H", Name: "R46H", Console: "R46H"},
+		{ID: "Devices/R50S", Name: "R50S", Console: "R50S"},
+	}}}
+	s.build()
+	for _, id := range []string{"Devices/R46H", "Devices/R50S"} {
+		name := id[len("Devices/"):]
+		s.console.SetSelected(name)
+		if s.profile != id || s.profileSelect.Selected != name {
+			t.Fatalf("%s: profile %q, shown %q", name, s.profile, s.profileSelect.Selected)
+		}
+	}
+}
