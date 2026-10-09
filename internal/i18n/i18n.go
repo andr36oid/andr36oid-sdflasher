@@ -43,6 +43,11 @@ func Resolve(locale string) string {
 	}
 	base := strings.SplitN(s, "-", 2)[0]
 	if base == "zh" {
+		for _, part := range strings.Split(s, "-")[1:] {
+			if part == "tw" || part == "hant" {
+				return "en"
+			}
+		}
 		return "zh-Hans"
 	}
 	for _, l := range Languages {
