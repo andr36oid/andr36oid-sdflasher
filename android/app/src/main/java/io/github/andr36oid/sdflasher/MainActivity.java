@@ -293,6 +293,7 @@ public final class MainActivity extends Activity {
                 "Finding your board and panel",
                 "Use your console’s board markings and screen information. Similar-looking consoles"
                     + " can require different DTBs."));
+    button("Use my console’s own DTB file…", v -> chooseOwnDTB());
     button(
         "Advanced: custom DTB",
         v ->
@@ -305,6 +306,7 @@ public final class MainActivity extends Activity {
                     (d, w) -> {
                       WorkState.custom = "";
                       WorkState.customAccepted = false;
+                      WorkState.convertDTB = false;
                       WorkState.revision++;
                     })
                 .show());
@@ -387,7 +389,9 @@ public final class MainActivity extends Activity {
     customLabel.setText(
         WorkState.custom.isEmpty()
             ? t("Use the DTB shipped with the selected profile.")
-            : t("Custom Android DTB") + ": " + new File(WorkState.custom).getName());
+            : WorkState.convertDTB
+                ? t("Converted from your console’s DTB: %s", new File(WorkState.custom).getName())
+                : t("Custom Android DTB") + ": " + new File(WorkState.custom).getName());
     JSONObject selected = selectedProfile();
     console.setText(
         selected == null ? t("Choose your console / board family") : selected.optString("console"));
@@ -434,6 +438,20 @@ public final class MainActivity extends Activity {
     if (!busy && WorkState.reviewReady) {
       WorkState.reviewReady = false;
       if (WorkState.error.isEmpty()) confirmWrite();
+    }
+    if (!busy && WorkState.conversion != null) {
+      JSONObject c = WorkState.conversion;
+      WorkState.conversion = null;
+      showConversion(c);
+    }
+    if (!busy && !WorkState.conversionRefused.isEmpty()) {
+      String reason = WorkState.conversionRefused;
+      WorkState.conversionRefused = "";
+      new AlertDialog.Builder(this)
+          .setTitle(t("This DTB can’t be converted"))
+          .setMessage(reason)
+          .setPositiveButton(t("OK"), null)
+          .show();
     }
     if (!busy && WorkState.releases != null) {
       JSONArray assets = WorkState.releases;
@@ -529,7 +547,8 @@ public final class MainActivity extends Activity {
       showError(t("Choose an .img or .img.zip release image."));
       return;
     }
-    final String extension = request == 2 ? ".dtb" : lower.endsWith(".zip") ? ".zip" : ".img";
+    final String extension =
+        request >= 2 ? ".dtb" : lower.endsWith(".zip") ? ".zip" : ".img";
     final Context app = getApplicationContext();
     WorkState.start(
         app,
@@ -546,7 +565,7 @@ public final class MainActivity extends Activity {
             int n;
             while ((n = in.read(buffer)) != -1) {
               total += n;
-              if (total > (request == 2 ? 4L << 20 : 32L << 30))
+              if (total > (request >= 2 ? 4L << 20 : 32L << 30))
                 throw new IOException("Selected file exceeds the size limit");
               out.write(buffer, 0, n);
             }
@@ -554,6 +573,18 @@ public final class MainActivity extends Activity {
             if (request == 2) {
               WorkState.custom = file.getAbsolutePath();
               WorkState.customAccepted = true;
+              WorkState.convertDTB = false;
+            } else if (request == 3) {
+              try {
+                WorkState.conversion =
+                    new JSONObject(WorkState.engine.convertDTB(file.getAbsolutePath()));
+                WorkState.conversionPath = file.getAbsolutePath();
+              } catch (Exception e) {
+                // a refusal explains itself; it is not an operation error
+                WorkState.conversionRefused = e.getMessage() == null ? e.toString() : e.getMessage();
+                WorkState.message = "Ready";
+                return;
+              }
             } else {
               WorkState.image =
                   new JSONObject(WorkState.engine.load(file.getAbsolutePath(), WorkState::event));
@@ -566,6 +597,78 @@ public final class MainActivity extends Activity {
             if (!keep) file.delete();
           }
         });
+  }
+
+  private void chooseOwnDTB() {
+    if (WorkState.image == null) {
+      info(
+          "Your console’s own DTB",
+          "Choose a release first. The conversion uses the DTBs of that release.");
+      return;
+    }
+    new AlertDialog.Builder(this)
+        .setTitle(t("Your console’s own DTB"))
+        .setMessage(
+            t(
+                "Choose the DTB file from your console’s original ArkOS, dArkOS or EmuELEC card."
+                    + " It is in the BOOT partition, often named rk3326-r36s-linux.dtb. The"
+                    + " flasher turns it into an andr36oid DTB: it copies your console’s screen,"
+                    + " buttons, battery and other board details into the andr36oid DTB of the"
+                    + " same board family. Your file and the files it replaces are kept in the"
+                    + " andr36oid-dtb-backup folder on BOOT."))
+        .setNegativeButton(t("Cancel"), null)
+        .setPositiveButton(t("Continue"), (d, w) -> pick(3))
+        .show();
+  }
+
+  private void showConversion(JSONObject c) {
+    String profileName = c.optString("profile");
+    JSONArray ps = WorkState.image == null ? null : WorkState.image.optJSONArray("profiles");
+    if (ps != null)
+      for (int n = 0; n < ps.length(); n++)
+        if (ps.optJSONObject(n).optString("id").equals(c.optString("profile")))
+          profileName = ps.optJSONObject(n).optString("name");
+    StringBuilder text =
+        new StringBuilder(
+            t(
+                "Board family: %s. Screen: %s. Device profile: %s.",
+                c.optString("family"),
+                c.optLong("width") + " × " + c.optLong("height"),
+                profileName));
+    text.append("\n\n")
+        .append(
+            t(
+                "This DTB was made by a program from your console’s own DTB. It has not been"
+                    + " tested on your console. If the screen stays dark or the buttons don’t"
+                    + " work, write the card again without it."));
+    JSONArray warnings = c.optJSONArray("warnings");
+    if (warnings != null && warnings.length() > 0) {
+      text.append("\n\n").append(t("Please check")).append(":");
+      for (int n = 0; n < warnings.length(); n++) text.append("\n• ").append(warnings.optString(n));
+    }
+    String path = WorkState.conversionPath;
+    new AlertDialog.Builder(this)
+        .setTitle(t("Your console’s own DTB"))
+        .setMessage(text.toString())
+        .setNeutralButton(
+            t("Full report"),
+            (d, w) ->
+                new AlertDialog.Builder(this)
+                    .setTitle(t("Full report"))
+                    .setMessage(c.optString("report"))
+                    .setPositiveButton(t("OK"), (d2, w2) -> showConversion(c))
+                    .show())
+        .setNegativeButton(t("Cancel"), null)
+        .setPositiveButton(
+            t("Use this DTB"),
+            (d, w) -> {
+              WorkState.custom = path;
+              WorkState.customAccepted = true;
+              WorkState.convertDTB = true;
+              if (!c.optString("profile").isEmpty()) WorkState.profile = c.optString("profile");
+              WorkState.revision++;
+            })
+        .show();
   }
 
   private void releases() {
@@ -729,7 +832,14 @@ public final class MainActivity extends Activity {
                     + " cleared. Userdata and games stay in place. A recovery backup will be"
                     + " saved before writing."
                 : "Everything currently on this card will be erased.");
-    if (!WorkState.custom.isEmpty()) message += "\n\n" + t(Mobile.customWarning());
+    if (WorkState.convertDTB)
+      message +=
+          "\n\n"
+              + t(
+                  "This DTB was made by a program from your console’s own DTB. It has not been"
+                      + " tested on your console. If the screen stays dark or the buttons don’t"
+                      + " work, write the card again without it.");
+    else if (!WorkState.custom.isEmpty()) message += "\n\n" + t(Mobile.customWarning());
     new AlertDialog.Builder(this)
         .setTitle(t(updating ? "Update this card?" : "Erase this card?"))
         .setMessage(target.label() + "\n\n" + message)

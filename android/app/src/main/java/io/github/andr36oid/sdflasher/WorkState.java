@@ -30,6 +30,11 @@ final class WorkState {
       message = "",
       result = "";
   static volatile boolean customAccepted = false, update = false, noROMs = false, busy = false;
+  // The console's own DTB: converted while writing (convert_dtb). conversion is
+  // the preview the user still has to accept; conversionRefused its reason.
+  static volatile boolean convertDTB = false;
+  static volatile JSONObject conversion;
+  static volatile String conversionPath = "", conversionRefused = "";
   static volatile long revision = 0;
   static Work pending;
   static boolean usbJob;
@@ -39,6 +44,8 @@ final class WorkState {
     profile = "";
     custom = "";
     customAccepted = false;
+    convertDTB = false;
+    conversion = null;
     revision++;
   }
 
@@ -119,6 +126,7 @@ final class WorkState {
         .put("profile", profile)
         .put("no_roms", noROMs)
         .put("custom", custom)
-        .put("custom_accepted", customAccepted);
+        .put("custom_accepted", customAccepted)
+        .put("convert_dtb", convertDTB);
   }
 }
