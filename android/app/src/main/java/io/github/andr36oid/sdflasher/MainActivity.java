@@ -491,6 +491,14 @@ public final class MainActivity extends Activity {
   }
 
   private void autoProfile() {
+    if (WorkState.image != null && WorkState.profile.isEmpty()) {
+      JSONArray profiles = WorkState.image.optJSONArray("profiles");
+      for (int n = 0; n < profiles.length(); n++)
+        if (profiles.optJSONObject(n).optString("id").equals("Panels/Panel4")) {
+          WorkState.profile = "Panels/Panel4";
+          break;
+        }
+    }
     if (WorkState.card != null && WorkState.image != null) {
       String p = WorkState.card.optString("profile");
       JSONArray ps = WorkState.image.optJSONArray("profiles");

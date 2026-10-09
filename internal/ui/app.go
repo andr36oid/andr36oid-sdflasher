@@ -285,6 +285,9 @@ func (s *screen) progressFn() func(int64, int64) {
 	}
 }
 func (s *screen) autoProfile() {
+	if s.profile == "" {
+		s.selectProfile("Panels/Panel4")
+	}
 	if s.card != nil {
 		s.selectProfile(s.card.Profile)
 	}
