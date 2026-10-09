@@ -8,6 +8,9 @@ An ordinary flash would render the system unbootable or with data loss. This too
 
 The new partitioning layout enables two things: Project Treble compatibility (and thereby GSIs), Android versions greater than 11 (not implemented or tested to date), and noticeably faster bootup time.
 
+## what is it not
+an effin web browser pretending to be an app (looking at you etcher)
+
 ## how use
 Go to GitHub releases, and download the binary for your platform. You can use Windows, Linux, macOS and Android.
 
