@@ -13,9 +13,10 @@ mkdir -p build dist
 # One APK carries every ABI supported by the USB stack.
 gomobile bind -ldflags="-s -w -extldflags=-Wl,-z,max-page-size=16384,-z,common-page-size=16384" -target=android/arm64,android/arm,android/amd64,android/386 -androidapi 23 \
   -javapkg io.github.andr36oid.bindings -o build/sdflasher-mobile.aar ./mobile
+unzip -p build/sdflasher-mobile.aar classes.jar > build/sdflasher-mobile.jar
 python3 scripts/licenses.py
 python3 scripts/android-licenses.py
-android/gradlew -p android :app:assembleRelease :app:assembleReleaseAndroidTest :app:testDebugUnitTest :app:lintRelease
+android/gradlew -p android :app:assembleRelease :smoke:assembleRelease :app:assembleDebug :app:assembleDebugAndroidTest :app:testDebugUnitTest :app:lintRelease
 cp android/app/build/outputs/apk/release/app-release.apk "dist/andr36oid-sdflasher-${VERSION:-development}-android-universal.apk"
 apk="dist/andr36oid-sdflasher-${VERSION:-development}-android-universal.apk"
 "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --min-sdk-version 23 "$apk"
@@ -23,4 +24,8 @@ apk="dist/andr36oid-sdflasher-${VERSION:-development}-android-universal.apk"
 python3 scripts/check-android-apk.py "$apk"
 cp android/app/build/outputs/mapping/release/mapping.txt "dist/andr36oid-sdflasher-${VERSION:-development}-android-mapping.txt"
 (cd dist && sha256sum andr36oid-sdflasher-*-android-universal.apk andr36oid-sdflasher-*-android-mapping.txt > SHA256SUMS-android)
-android/gradlew -p android -PtestBuildType=debug :app:assembleDebug :app:assembleDebugAndroidTest
+mkdir -p build/android-test-inputs/{release,debug,androidTest/debug}
+cp android/app/build/outputs/apk/release/app-release.apk build/android-test-inputs/release/
+cp android/smoke/build/outputs/apk/release/smoke-release.apk build/android-test-inputs/release/test.apk
+cp android/app/build/outputs/apk/debug/app-debug.apk build/android-test-inputs/debug/
+cp android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk build/android-test-inputs/androidTest/debug/

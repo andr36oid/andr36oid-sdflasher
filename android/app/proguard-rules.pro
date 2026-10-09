@@ -9,8 +9,3 @@
 -keepclassmembers class * implements io.github.andr36oid.bindings.mobile.Observer {
     public void progress(java.lang.String);
 }
-
-# The instrumentation runner calls this shared dependency from its own APK.
--keep,allowoptimization class androidx.tracing.Trace {
-    public static <methods>;
-}

@@ -2,7 +2,9 @@ package io.github.andr36oid.sdflasher;
 
 import static org.junit.Assert.*;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Build;
 import android.view.*;
 import android.widget.TextView;
@@ -46,7 +48,11 @@ public class ReleaseTest {
 
   @Test
   public void languageChoiceSurvivesRecreation() {
-    try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+    try (ActivityScenario<Activity> scenario =
+        ActivityScenario.launch(
+            new Intent(Intent.ACTION_MAIN)
+                .setClassName(
+                    context.getPackageName(), "io.github.andr36oid.sdflasher.MainActivity"))) {
       for (String code :
           new String[] {"en", "de", "ru", "uk", "es", "pt", "pt-BR", "hi", "ko", "zh-Hans"}) {
         context.getSharedPreferences("settings", 0).edit().putString("language", code).commit();

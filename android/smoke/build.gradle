@@ -1,0 +1,30 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'io.github.andr36oid.sdflasher.test'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'io.github.andr36oid.sdflasher.test'
+        minSdk 23
+        targetSdk 36
+    }
+    signingConfigs {
+        release {
+            if (System.getenv('ANDROID_KEYSTORE')) {
+                storeFile file(System.getenv('ANDROID_KEYSTORE'))
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias 'sdflasher'
+                keyPassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            }
+        }
+    }
+    buildTypes.release {
+        signingConfig System.getenv('ANDROID_KEYSTORE') ? signingConfigs.release : signingConfigs.debug
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies {
+    compileOnly files('../../build/sdflasher-mobile.jar')
+    implementation 'androidx.test:runner:1.6.2'
+    implementation 'androidx.test:rules:1.6.1'
+    implementation 'androidx.test.ext:junit:1.2.1'
+}

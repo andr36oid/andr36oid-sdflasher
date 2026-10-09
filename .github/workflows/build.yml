@@ -163,11 +163,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: android-test-inputs
-          path: |
-            android/app/build/outputs/apk/release/*.apk
-            android/app/build/outputs/apk/androidTest/release/*.apk
-            android/app/build/outputs/apk/debug/*.apk
-            android/app/build/outputs/apk/androidTest/debug/*.apk
+          path: build/android-test-inputs/
           if-no-files-found: error
   android-smoke:
     needs: android
