@@ -155,6 +155,8 @@ type options struct {
 	Identity       string `json:"identity"`
 	Custom         string `json:"custom"`
 	CustomAccepted bool   `json:"custom_accepted"`
+	System         string `json:"system"`
+	SystemAccepted bool   `json:"system_accepted"`
 }
 
 func (s *Session) plan(d *usbDisk, input string) (*flash.Plan, options, error) {
@@ -177,6 +179,9 @@ func (s *Session) plan(d *usbDisk, input string) (*flash.Plan, options, error) {
 	}
 	if opts.Custom != "" && !opts.CustomAccepted {
 		return nil, opts, errors.New(firmware.CustomWarning)
+	}
+	if opts.System != "" && !opts.SystemAccepted {
+		return nil, opts, errors.New(firmware.GSIWarning)
 	}
 	p, e := flash.Build(s.image, card, d.size, opts.Mode, opts.Profile, opts.NoROMs, opts.UserdataGiB)
 	return p, opts, e
@@ -262,6 +267,16 @@ func (s *Session) Write(d Disk, input string, observer Observer) (string, error)
 	directory.Close()
 	if e != nil {
 		return "", e
+	}
+	if opts.System != "" {
+		sys, e := firmware.PrepareSystem(context.Background(), s.image, opts.System, dir)
+		if e != nil {
+			return "", e
+		}
+		defer os.Remove(sys)
+		if e = p.UseSystemImage(sys); e != nil {
+			return "", e
+		}
 	}
 	boot, e := firmware.PrepareBoot(s.image, opts.Profile, p.NoROMs, opts.Mode == "update", p.UserdataGiB, opts.Custom, dir)
 	if e != nil {

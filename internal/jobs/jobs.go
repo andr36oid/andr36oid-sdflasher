@@ -28,6 +28,8 @@ type Request struct {
 	UserdataGiB     int            `json:"userdata_gib,omitempty"`
 	CustomDTB       string         `json:"custom_dtb,omitempty"`
 	CustomAccepted  bool           `json:"custom_accepted,omitempty"`
+	SystemImage     string         `json:"system_image,omitempty"`
+	SystemAccepted  bool           `json:"system_accepted,omitempty"`
 }
 type Result struct {
 	Done     bool            `json:"done"`
@@ -142,6 +144,20 @@ func Worker(job string) error {
 		p, e := flash.Build(im, card, d.Size, req.Mode, req.Profile, req.NoROMs, req.UserdataGiB)
 		if e != nil {
 			return e
+		}
+		if req.SystemImage != "" {
+			if !req.SystemAccepted {
+				return errors.New(firmware.GSIWarning)
+			}
+			emit(Result{Progress: &flash.Progress{Phase: "preflight", Name: "Preparing the system image"}})
+			sys, e := firmware.PrepareSystem(context.Background(), im, req.SystemImage, dir)
+			if e != nil {
+				return e
+			}
+			defer os.Remove(sys)
+			if e = p.UseSystemImage(sys); e != nil {
+				return e
+			}
 		}
 		boot, e := firmware.PrepareBoot(im, req.Profile, p.NoROMs, req.Mode == "update", p.UserdataGiB, req.CustomDTB, dir)
 		if e != nil {

@@ -112,6 +112,19 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 	if e != nil {
 		return e
 	}
+	var system *os.File
+	var systemSize int64
+	if p.SystemImage != "" {
+		if system, e = os.Open(p.SystemImage); e != nil {
+			return e
+		}
+		defer system.Close()
+		sst, e := system.Stat()
+		if e != nil {
+			return e
+		}
+		systemSize = sst.Size()
+	}
 	for _, w := range p.Writes {
 		if w.Data != nil {
 			if int64(len(w.Data)) != w.Length {
@@ -123,6 +136,13 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 		off := w.SourceOffset
 		if w.Boot {
 			available = bst.Size()
+			off = 0
+		}
+		if w.System {
+			if system == nil {
+				return errors.New("system image missing")
+			}
+			available = systemSize
 			off = 0
 		}
 		if off < 0 || off > available || w.Length > available-off {
@@ -167,6 +187,9 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 		}
 		if w.Boot {
 			return boot, 0
+		}
+		if w.System {
+			return system, 0
 		}
 		return src, w.SourceOffset
 	}

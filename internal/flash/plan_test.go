@@ -204,3 +204,48 @@ func TestInstallSizesFollowTheResizer(t *testing.T) {
 		t.Errorf("update kept a size: %v %v", e, p)
 	}
 }
+func TestSystemImageReplacesOnlySystem(t *testing.T) {
+	for _, mode := range []string{"install", "update"} {
+		t.Run(mode, func(t *testing.T) {
+			im, card, dst, boot := sample(t)
+			p, e := Build(im, card, card.Table.Size, mode, "Panels/Panel4", true, 0)
+			if e != nil {
+				t.Fatal(e)
+			}
+			sys, _ := im.Table.Find("system")
+			gsi := filepath.Join(t.TempDir(), "system.img")
+			os.WriteFile(gsi, bytes.Repeat([]byte{0x6e}, int(sys.Size())), 0600)
+			if e = p.UseSystemImage(filepath.Join(t.TempDir(), "missing")); e == nil {
+				t.Fatal("accepted a missing system image")
+			}
+			short := filepath.Join(t.TempDir(), "short.img")
+			os.WriteFile(short, make([]byte, 512), 0600)
+			if e = p.UseSystemImage(short); e == nil {
+				t.Fatal("accepted a system image of the wrong size")
+			}
+			if e = p.UseSystemImage(gsi); e != nil {
+				t.Fatal(e)
+			}
+			if e = Execute(context.Background(), dst, im, p, boot, t.TempDir(), nil); e != nil {
+				t.Fatal(e)
+			}
+			got := make([]byte, sys.Size())
+			dst.ReadAt(got, sys.Offset())
+			if !bytes.Equal(got, bytes.Repeat([]byte{0x6e}, int(sys.Size()))) {
+				t.Fatal("system partition does not hold the chosen image")
+			}
+			// Everything else the release writes still comes from the release.
+			src, _ := os.ReadFile(im.Path)
+			for _, q := range im.Table.Parts {
+				if q.Name == "system" || q.Name == "BOOT" || (mode == "update" && (q.Name == "metadata" || q.Name == "misc")) {
+					continue
+				}
+				b := make([]byte, q.Size())
+				dst.ReadAt(b, q.Offset())
+				if !bytes.Equal(b, src[q.Offset():q.Offset()+q.Size()]) {
+					t.Fatalf("%s not written from the release", q.Name)
+				}
+			}
+		})
+	}
+}
