@@ -2,6 +2,7 @@
 set -euo pipefail
 trap 'adb logcat -d -v threadtime > android-logcat.txt' EXIT
 adb logcat -c
+adb shell setprop debug.checkjni 1
 adb install apks/release/app-release.apk
 adb install apks/release/test.apk
 timeout 180s adb shell am instrument -w -e class io.github.andr36oid.sdflasher.ReleaseTest io.github.andr36oid.sdflasher.test/androidx.test.runner.AndroidJUnitRunner | tee instrumentation.txt

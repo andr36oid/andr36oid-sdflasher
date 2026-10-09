@@ -19,6 +19,8 @@ public final class MainActivity extends Activity {
   private final Handler handler = new Handler(Looper.getMainLooper());
   private long rendered = -1;
   private LinearLayout body;
+  private FrameLayout page;
+  private Button updateNotice;
   private TextView imageLabel, cardLabel, status, customLabel;
   private Button language, console, profile, chooseCard, action;
   private final List<View> controls = new ArrayList<>();
@@ -36,10 +38,11 @@ public final class MainActivity extends Activity {
   private final Runnable poll =
       new Runnable() {
         public void run() {
-          if (WorkState.revision != rendered) {
+          if (adviceAccepted() && WorkState.revision != rendered) {
             rendered = WorkState.revision;
             render();
           }
+          if (adviceAccepted()) showAppUpdate();
           handler.postDelayed(this, 200);
         }
       };
@@ -84,7 +87,18 @@ public final class MainActivity extends Activity {
     if (Build.VERSION.SDK_INT >= 33)
       registerReceiver(usbEvents, filter, Context.RECEIVER_NOT_EXPORTED);
     else registerReceiver(usbEvents, filter);
+    if (adviceAccepted()) startSetup();
+    else showCardAdvice();
+  }
+
+  private boolean adviceAccepted() {
+    return getSharedPreferences("settings", 0).getBoolean("sd-card-advice-v1", false);
+  }
+
+  private void startSetup() {
     build();
+    rendered = -1;
+    WorkState.checkAppUpdate();
     if (Build.VERSION.SDK_INT >= 33
         && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
             != android.content.pm.PackageManager.PERMISSION_GRANTED)
@@ -106,6 +120,7 @@ public final class MainActivity extends Activity {
 
   @Override
   protected void onDestroy() {
+    handler.removeCallbacksAndMessages(null);
     try {
       unregisterReceiver(usbEvents);
     } catch (IllegalArgumentException ignored) {
@@ -138,7 +153,7 @@ public final class MainActivity extends Activity {
     return view;
   }
 
-  private void build() {
+  private void createPage() {
     controls.clear();
     ScrollView scroll = new ScrollView(this);
     scroll.setFillViewport(true);
@@ -147,7 +162,9 @@ public final class MainActivity extends Activity {
     body.setPadding(dp(18), dp(12), dp(18), dp(24));
     body.setBackgroundColor(0xfff8fafd);
     scroll.addView(body);
-    setContentView(scroll);
+    page = new FrameLayout(this);
+    page.addView(scroll);
+    setContentView(page);
     scroll.setOnApplyWindowInsetsListener(
         (view, insets) -> {
           view.setPadding(
@@ -157,6 +174,90 @@ public final class MainActivity extends Activity {
               insets.getSystemWindowInsetBottom());
           return insets;
         });
+  }
+
+  private void showCardAdvice() {
+    createPage();
+    label("andr36oid SD Flasher", true);
+    language = button(I18n.name(this), v -> languages());
+    label(t("Your SD card matters"), true);
+    for (String key :
+        new String[] {
+          "Android is much heavier on storage than ArkOS and similar Linux firmware. Use a"
+              + " high-quality, fast microSD card for a smooth experience.",
+          "Low-quality cards can fail early, behave unpredictably, cause crashes, or corrupt data.",
+          "We don’t recommend specific brands: a brand label doesn’t prove a card is genuine. Buy"
+              + " quality storage from reputable sellers.",
+          "8 GB is the minimum. For Android, we recommend at least 32 GB. 128 GB is the sweet spot"
+              + " for Android and EASYROMS to fit comfortably. Smaller cards can work if they meet"
+              + " the 8 GB minimum."
+        }) label(t(key), false);
+    button(
+        "I understand",
+        v -> {
+          getSharedPreferences("settings", 0).edit().putBoolean("sd-card-advice-v1", true).apply();
+          startSetup();
+        });
+  }
+
+  void showAppUpdate() {
+    if (updateNotice != null) updateNotice.setEnabled(!WorkState.busy);
+    JSONObject update = WorkState.appUpdate;
+    if (!adviceAccepted()
+        || WorkState.busy
+        || WorkState.updateShown
+        || update == null
+        || update.optString("apk").isEmpty()) return;
+    WorkState.updateShown = true;
+    Button notice = new Button(this);
+    updateNotice = notice;
+    notice.setAllCaps(false);
+    notice.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+    notice.setText(
+        t("Flasher %s is available", update.optString("version"))
+            + "\n"
+            + t("Tap to download the APK"));
+    notice.setTextColor(0xffffffff);
+    notice.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff18304a));
+    FrameLayout.LayoutParams params =
+        new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM);
+    params.setMargins(dp(16), 0, dp(16), dp(72));
+    page.addView(notice, params);
+    notice.setOnClickListener(
+        v -> {
+          if (WorkState.busy) return;
+          try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(update.optString("apk"))));
+          } catch (ActivityNotFoundException e) {
+            info(t("Download update"), update.optString("apk"));
+          }
+          if (notice.getParent() instanceof ViewGroup)
+            ((ViewGroup) notice.getParent()).removeView(notice);
+        });
+    int duration = 20000;
+    if (Build.VERSION.SDK_INT >= 29) {
+      android.view.accessibility.AccessibilityManager accessibility =
+          (android.view.accessibility.AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
+      if (accessibility != null)
+        duration =
+            accessibility.getRecommendedTimeoutMillis(
+                duration,
+                android.view.accessibility.AccessibilityManager.FLAG_CONTENT_TEXT
+                    | android.view.accessibility.AccessibilityManager.FLAG_CONTENT_CONTROLS);
+    }
+    handler.postDelayed(
+        () -> {
+          if (notice.getParent() instanceof ViewGroup)
+            ((ViewGroup) notice.getParent()).removeView(notice);
+        },
+        duration);
+  }
+
+  private void build() {
+    createPage();
     label("andr36oid SD Flasher", true);
     language = new Button(this);
     language.setAllCaps(false);
@@ -255,7 +356,8 @@ public final class MainActivity extends Activity {
                   .edit()
                   .putString("language", n == 0 ? "" : I18n.CODES[n - 1])
                   .apply();
-              build();
+              if (adviceAccepted()) build();
+              else showCardAdvice();
             })
         .show();
   }

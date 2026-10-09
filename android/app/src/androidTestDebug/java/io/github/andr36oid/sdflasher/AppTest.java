@@ -27,7 +27,12 @@ public class AppTest {
   @Before
   public void prepare() throws Exception {
     context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-    context.getSharedPreferences("settings", 0).edit().clear().commit();
+    context
+        .getSharedPreferences("settings", 0)
+        .edit()
+        .clear()
+        .putBoolean("sd-card-advice-v1", true)
+        .commit();
     if (Build.VERSION.SDK_INT >= 33) {
       InstrumentationRegistry.getInstrumentation()
           .getUiAutomation()
@@ -35,6 +40,19 @@ public class AppTest {
               "pm grant " + context.getPackageName() + " android.permission.POST_NOTIFICATIONS")
           .close();
     }
+  }
+
+  private TextView findText(View view, String text) {
+    if (view instanceof TextView && ((TextView) view).getText().toString().equals(text))
+      return (TextView) view;
+    if (view instanceof ViewGroup) {
+      ViewGroup group = (ViewGroup) view;
+      for (int n = 0; n < group.getChildCount(); n++) {
+        TextView found = findText(group.getChildAt(n), text);
+        if (found != null) return found;
+      }
+    }
+    return null;
   }
 
   private boolean contains(View view, String text) {
@@ -142,5 +160,67 @@ public class AppTest {
     long limit = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
     while (WorkState.busy && System.nanoTime() < limit) Thread.sleep(50);
     assertFalse(WorkState.busy);
+  }
+
+  @Test
+  public void cardAdviceRequiresAgreementAndRemembersIt() {
+    context
+        .getSharedPreferences("settings", 0)
+        .edit()
+        .putBoolean("sd-card-advice-v1", false)
+        .commit();
+    try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+      scenario.onActivity(
+          activity -> {
+            View root = activity.getWindow().getDecorView();
+            assertTrue(contains(root, "Your SD card matters"));
+            assertFalse(contains(root, "Download a release…"));
+            assertFalse(
+                context.getSharedPreferences("settings", 0).getBoolean("sd-card-advice-v1", false));
+            findText(root, "I understand").performClick();
+            assertTrue(contains(activity.getWindow().getDecorView(), "Download a release…"));
+          });
+      scenario.recreate();
+      scenario.onActivity(
+          activity ->
+              assertFalse(contains(activity.getWindow().getDecorView(), "Your SD card matters")));
+    }
+  }
+
+  @Test
+  public void updateToastOpensTheOfficialApk() throws Exception {
+    String apk =
+        "https://github.com/andr36oid/andr36oid-sdflasher/releases/download/v9.0.0/andr36oid-sdflasher-v9.0.0-android-universal.apk";
+    WorkState.appUpdate = new JSONObject().put("version", "v9.0.0").put("apk", apk);
+    WorkState.updateShown = false;
+    android.content.IntentFilter filter =
+        new android.content.IntentFilter(android.content.Intent.ACTION_VIEW);
+    filter.addDataScheme("https");
+    filter.addDataAuthority("github.com", null);
+    filter.addDataPath(
+        android.net.Uri.parse(apk).getPath(), android.os.PatternMatcher.PATTERN_LITERAL);
+    android.app.Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+    android.app.Instrumentation.ActivityMonitor monitor =
+        instrumentation.addMonitor(
+            filter,
+            new android.app.Instrumentation.ActivityResult(android.app.Activity.RESULT_OK, null),
+            true);
+    try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
+      scenario.onActivity(
+          activity -> {
+            activity.showAppUpdate();
+            TextView notice =
+                findText(
+                    activity.getWindow().getDecorView(),
+                    "Flasher v9.0.0 is available\nTap to download the APK");
+            assertNotNull(notice);
+            notice.performClick();
+          });
+      assertEquals(1, monitor.getHits());
+    } finally {
+      instrumentation.removeMonitor(monitor);
+      WorkState.appUpdate = null;
+      WorkState.updateShown = false;
+    }
   }
 }

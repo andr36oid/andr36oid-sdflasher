@@ -25,6 +25,10 @@ var Version = "development"
 type screen struct {
 	win                                 fyne.Window
 	locale                              string
+	started                             bool
+	update                              *catalog.AppUpdate
+	updateBanner                        *fyne.Container
+	updateCancel                        context.CancelFunc
 	language                            *widget.Button
 	drives                              []platform.Drive
 	updating                            bool
@@ -58,10 +62,16 @@ func Run() {
 			s.info(s.t("Operation in progress"), s.t("Wait for the operation to finish before closing. Keep the card connected."), w)
 			return
 		}
+		if s.updateCancel != nil {
+			s.updateCancel()
+		}
 		w.Close()
 	})
-	s.build()
-	s.listDrives()
+	if a.Preferences().Bool("sd-card-advice-v1") {
+		s.start()
+	} else {
+		s.showCardAdvice()
+	}
 	w.ShowAndRun()
 }
 func (s *screen) t(key string, args ...any) string { return i18n.Text(s.locale, key, args...) }
@@ -152,7 +162,10 @@ func (s *screen) build() {
 		s.info(s.t("Finding your board and panel"), s.t("An existing andr36oid card may identify its selected profile. For a new card, use your console’s board markings and the panel information from its supplier. Similar-looking R36S consoles can have different wiring. Choose the board family first; a panel number alone is not enough. If your console is missing here, this release does not ship its profile."), s.win)
 	}), advanced, widget.NewLabelWithStyle(s.t("3. microSD card"), 0, fyne.TextStyle{Bold: true}), container.NewBorder(nil, nil, nil, s.refresh, s.driveSelect), s.cardLabel, s.mode, s.noROMs, wrapped(s.t("Unchecked: reserve 16 GiB for Android and use the remaining space for a games partition readable on your computer. Updates keep the existing arrangement.")))
 	s.language = widget.NewButton(s.languageName(), s.chooseLanguage)
-	s.home = container.NewBorder(container.NewBorder(nil, nil, nil, s.language, widget.NewLabel("andr36oid SD Flasher")), container.NewVBox(s.help, s.action, container.NewHBox(widget.NewButton(s.t("Restore an interrupted update…"), s.recover), widget.NewLabel("GPLv3 · "+Version))), nil, nil, container.NewVScroll(body))
+	s.updateBanner = container.NewVBox()
+	s.renderAppUpdate()
+	header := container.NewVBox(container.NewBorder(nil, nil, nil, s.language, widget.NewLabel("andr36oid SD Flasher")), s.updateBanner)
+	s.home = container.NewBorder(header, container.NewVBox(s.help, s.action, container.NewHBox(widget.NewButton(s.t("Restore an interrupted update…"), s.recover), widget.NewLabel("GPLv3 · "+Version))), nil, nil, container.NewVScroll(body))
 	s.win.SetContent(s.home)
 	s.populateImage()
 	s.profile = oldProfile

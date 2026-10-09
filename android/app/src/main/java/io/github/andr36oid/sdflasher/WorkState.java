@@ -15,6 +15,8 @@ final class WorkState {
   }
 
   static volatile Session engine;
+  static volatile JSONObject appUpdate;
+  static boolean updateCheckStarted, updateShown;
   static volatile JSONObject image, card, progress, plan;
   static volatile org.json.JSONArray releases;
   static volatile String reviewOptions = "";
@@ -31,6 +33,21 @@ final class WorkState {
   static volatile long revision = 0;
   static Work pending;
   static boolean usbJob;
+
+  static synchronized void checkAppUpdate() {
+    if (updateCheckStarted) return;
+    updateCheckStarted = true;
+    new Thread(
+            () -> {
+              try {
+                String value = Mobile.checkAppUpdate(BuildConfig.VERSION_NAME);
+                if (!value.isEmpty()) appUpdate = new JSONObject(value);
+              } catch (Exception ignored) {
+              }
+            },
+            "app-update-check")
+        .start();
+  }
 
   static synchronized void init(Context context) throws Exception {
     if (engine == null)

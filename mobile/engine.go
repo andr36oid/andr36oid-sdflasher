@@ -66,6 +66,13 @@ func (d *usbDisk) WriteAt(p []byte, off int64) (int, error) {
 }
 func (d *usbDisk) Sync() error     { return d.disk.Flush() }
 func encode(v any) (string, error) { b, e := json.Marshal(v); return string(b), e }
+func CheckAppUpdate(current string) (string, error) {
+	update, err := catalog.CheckAppUpdate(context.Background(), current)
+	if err != nil || update == nil {
+		return "", err
+	}
+	return encode(update)
+}
 func emit(observer Observer, p flash.Progress) {
 	if observer != nil {
 		s, _ := encode(p)

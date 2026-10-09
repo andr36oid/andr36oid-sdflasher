@@ -37,7 +37,11 @@ func (s *screen) chooseLanguage() {
 		fyne.CurrentApp().Preferences().SetString("language", code)
 		s.locale = preferredLocale(fyne.CurrentApp())
 		s.localizeDialogs()
-		s.build()
+		if s.started {
+			s.build()
+		} else {
+			s.showCardAdvice()
+		}
 	}
 	automatic := fyne.NewMenuItem(s.t("System language"), func() { change("") })
 	automatic.Checked = fyne.CurrentApp().Preferences().String("language") == ""

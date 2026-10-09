@@ -25,7 +25,12 @@ public class ReleaseTest {
   @Before
   public void prepare() throws Exception {
     context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-    context.getSharedPreferences("settings", 0).edit().clear().commit();
+    context
+        .getSharedPreferences("settings", 0)
+        .edit()
+        .clear()
+        .putBoolean("sd-card-advice-v1", true)
+        .commit();
     if (Build.VERSION.SDK_INT >= 33) {
       InstrumentationRegistry.getInstrumentation()
           .getUiAutomation()
@@ -33,6 +38,19 @@ public class ReleaseTest {
               "pm grant " + context.getPackageName() + " android.permission.POST_NOTIFICATIONS")
           .close();
     }
+  }
+
+  private TextView findText(View view, String text) {
+    if (view instanceof TextView && ((TextView) view).getText().toString().equals(text))
+      return (TextView) view;
+    if (view instanceof ViewGroup) {
+      ViewGroup group = (ViewGroup) view;
+      for (int n = 0; n < group.getChildCount(); n++) {
+        TextView found = findText(group.getChildAt(n), text);
+        if (found != null) return found;
+      }
+    }
+    return null;
   }
 
   private boolean contains(View view, String text) {
@@ -154,5 +172,34 @@ public class ReleaseTest {
       archive.delete();
     }
     assertTrue("Go must invoke the Java progress callback", events.get() > 0);
+  }
+
+  @Test
+  public void cardAdviceRequiresAgreementAndRemembersIt() {
+    context
+        .getSharedPreferences("settings", 0)
+        .edit()
+        .putBoolean("sd-card-advice-v1", false)
+        .commit();
+    try (ActivityScenario<Activity> scenario =
+        ActivityScenario.launch(
+            new Intent(Intent.ACTION_MAIN)
+                .setClassName(
+                    context.getPackageName(), "io.github.andr36oid.sdflasher.MainActivity"))) {
+      scenario.onActivity(
+          activity -> {
+            View root = activity.getWindow().getDecorView();
+            assertTrue(contains(root, "Your SD card matters"));
+            assertFalse(contains(root, "Download a release…"));
+            assertFalse(
+                context.getSharedPreferences("settings", 0).getBoolean("sd-card-advice-v1", false));
+            findText(root, "I understand").performClick();
+            assertTrue(contains(activity.getWindow().getDecorView(), "Download a release…"));
+          });
+      scenario.recreate();
+      scenario.onActivity(
+          activity ->
+              assertFalse(contains(activity.getWindow().getDecorView(), "Your SD card matters")));
+    }
   }
 }
