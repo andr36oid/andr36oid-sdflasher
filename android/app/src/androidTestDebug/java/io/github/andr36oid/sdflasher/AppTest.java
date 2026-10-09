@@ -86,6 +86,37 @@ public class AppTest {
   }
 
   @Test
+  public void detectedProfileTakesPriorityWithoutGuessingMissingPanels() throws Exception {
+    JSONObject oldImage = WorkState.image, oldCard = WorkState.card;
+    String oldProfile = WorkState.profile;
+    try {
+      WorkState.image =
+          new JSONObject("{\"profiles\":[{\"id\":\"Panels/Panel4\"},{\"id\":\"Panels/Panel3\"}]}");
+      WorkState.card = null;
+      WorkState.profile = "";
+      WorkState.autoProfile();
+      assertEquals("Panels/Panel4", WorkState.profile);
+      WorkState.profile = "Panels/Panel3";
+      WorkState.autoProfile();
+      assertEquals("Panels/Panel3", WorkState.profile);
+      WorkState.card = new JSONObject("{\"profile\":\"Panels/Panel4\"}");
+      WorkState.autoProfile();
+      assertEquals("Panels/Panel4", WorkState.profile);
+      WorkState.card = new JSONObject("{\"profile\":\"Devices/Other\"}");
+      WorkState.autoProfile();
+      assertEquals("", WorkState.profile);
+      WorkState.card = null;
+      WorkState.image = new JSONObject("{\"profiles\":[{\"id\":\"Panels/Panel3\"}]}");
+      WorkState.autoProfile();
+      assertEquals("", WorkState.profile);
+    } finally {
+      WorkState.image = oldImage;
+      WorkState.card = oldCard;
+      WorkState.profile = oldProfile;
+    }
+  }
+
+  @Test
   public void automaticLocaleUsesBrazilianPortugueseAndEnglishFallback() {
     Configuration config = new Configuration(context.getResources().getConfiguration());
     config.setLocale(new Locale("pt", "BR"));

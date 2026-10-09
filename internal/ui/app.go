@@ -242,6 +242,9 @@ func (s *screen) loadImage(p string) {
 	s.setBusy(true)
 	s.im = nil
 	s.profile = ""
+	s.custom = ""
+	s.customAccepted = false
+	s.customLabel.SetText(s.t("Use the DTB shipped with the selected profile."))
 	s.releaseLabel.SetText(s.t("Checking the release image…"))
 	s.progress.SetValue(0)
 	s.progress.Show()
@@ -285,16 +288,20 @@ func (s *screen) progressFn() func(int64, int64) {
 	}
 }
 func (s *screen) autoProfile() {
+	if s.card != nil && s.card.Profile != "" {
+		if !s.selectProfile(s.card.Profile) {
+			s.profile = ""
+			s.console.ClearSelected()
+		}
+		return
+	}
 	if s.profile == "" {
 		s.selectProfile("Panels/Panel4")
 	}
-	if s.card != nil {
-		s.selectProfile(s.card.Profile)
-	}
 }
-func (s *screen) selectProfile(id string) {
+func (s *screen) selectProfile(id string) bool {
 	if s.im == nil {
-		return
+		return false
 	}
 	for _, p := range s.im.Profiles {
 		if p.ID == id {
@@ -304,9 +311,10 @@ func (s *screen) selectProfile(id string) {
 				label += " (" + s.t("experimental") + ")"
 			}
 			s.profileSelect.SetSelected(label)
-			return
+			return true
 		}
 	}
+	return false
 }
 func (s *screen) populateImage() {
 	if s.im == nil {

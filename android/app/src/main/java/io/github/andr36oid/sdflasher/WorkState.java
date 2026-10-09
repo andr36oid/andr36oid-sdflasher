@@ -21,7 +21,7 @@ final class WorkState {
   static volatile org.json.JSONArray releases;
   static volatile String reviewOptions = "";
   static volatile boolean reviewReady = false;
-  static volatile UsbCard selected;
+  static volatile UsbCard selected, pendingReader;
   static volatile List<UsbCard> discovered;
   static volatile String identity = "",
       profile = "",
@@ -33,6 +33,29 @@ final class WorkState {
   static volatile long revision = 0;
   static Work pending;
   static boolean usbJob;
+
+  static void clearImage() {
+    image = null;
+    profile = "";
+    custom = "";
+    customAccepted = false;
+    revision++;
+  }
+
+  static void autoProfile() {
+    if (image == null) return;
+    String detected = card == null ? "" : card.optString("profile");
+    String preferred =
+        !detected.isEmpty() ? detected : profile.isEmpty() ? "Panels/Panel4" : profile;
+    org.json.JSONArray profiles = image.optJSONArray("profiles");
+    profile = "";
+    if (profiles != null)
+      for (int n = 0; n < profiles.length(); n++)
+        if (profiles.optJSONObject(n).optString("id").equals(preferred)) {
+          profile = preferred;
+          return;
+        }
+  }
 
   static synchronized void checkAppUpdate() {
     if (updateCheckStarted) return;

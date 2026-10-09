@@ -21,14 +21,13 @@ public final class MainActivity extends Activity {
   private LinearLayout body;
   private FrameLayout page;
   private Button updateNotice;
-  private TextView imageLabel, cardLabel, status, customLabel;
+  private TextView imageLabel, cardLabel, status, customLabel, mapLegend;
   private Button language, console, profile, chooseCard, action;
   private final List<View> controls = new ArrayList<>();
   private CheckBox noROMs;
   private RadioButton install, update;
   private ProgressBar progress;
   private DiskMap map;
-  private UsbCard pendingReader;
   private String lastError = "", lastResult = "";
 
   private String t(String key, Object... args) {
@@ -52,15 +51,21 @@ public final class MainActivity extends Activity {
         public void onReceive(Context context, Intent intent) {
           if ((getPackageName() + ".USB_PERMISSION").equals(intent.getAction())) {
             UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            UsbCard pendingReader = WorkState.pendingReader;
             if (pendingReader != null
                 && device != null
                 && device.getDeviceId() == pendingReader.device.getDeviceId()) {
+              WorkState.pendingReader = null;
               if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false))
                 discover(pendingReader);
               else showError(t("USB permission was denied."));
             }
           } else if (UsbManager.ACTION_USB_DEVICE_DETACHED.equals(intent.getAction())) {
             UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            if (device != null
+                && WorkState.pendingReader != null
+                && device.getDeviceId() == WorkState.pendingReader.device.getDeviceId())
+              WorkState.pendingReader = null;
             if (device != null
                 && WorkState.selected != null
                 && device.getDeviceId() == WorkState.selected.device.getDeviceId()) {
@@ -110,6 +115,12 @@ public final class MainActivity extends Activity {
     super.onResume();
     rendered = -1;
     handler.post(poll);
+    UsbCard pendingReader = WorkState.pendingReader;
+    if (pendingReader != null
+        && ((UsbManager) getSystemService(USB_SERVICE)).hasPermission(pendingReader.device)) {
+      WorkState.pendingReader = null;
+      discover(pendingReader);
+    }
   }
 
   @Override
@@ -336,7 +347,7 @@ public final class MainActivity extends Activity {
     status = label("", false);
     map = new DiskMap(this);
     body.addView(map, new LinearLayout.LayoutParams(-1, dp(160)));
-    label(t("Pending · Writing · Written · Verified · Preserved"), false);
+    mapLegend = label(t("Pending · Writing · Written · Verified · Preserved"), false);
     button("Restore an interrupted update…", v -> recover());
     button("About and licenses", v -> about());
     label(BuildConfig.VERSION_NAME + " · GPLv3", false);
@@ -410,6 +421,10 @@ public final class MainActivity extends Activity {
     progress.setIndeterminate(busy && (p == null || p.optLong("total") == 0));
     if (p != null && p.optLong("total") > 0)
       progress.setProgress((int) (1000.0 * p.optLong("done") / p.optLong("total")));
+    progress.setVisibility(busy || p != null ? View.VISIBLE : View.GONE);
+    status.setVisibility(status.getText().length() > 0 ? View.VISIBLE : View.GONE);
+    map.setVisibility(WorkState.plan != null ? View.VISIBLE : View.GONE);
+    mapLegend.setVisibility(WorkState.plan != null ? View.VISIBLE : View.GONE);
     map.update(WorkState.plan, p);
     if (!busy && WorkState.discovered != null) {
       List<UsbCard> cards = WorkState.discovered;
@@ -490,26 +505,6 @@ public final class MainActivity extends Activity {
         .show();
   }
 
-  private void autoProfile() {
-    if (WorkState.image != null && WorkState.profile.isEmpty()) {
-      JSONArray profiles = WorkState.image.optJSONArray("profiles");
-      for (int n = 0; n < profiles.length(); n++)
-        if (profiles.optJSONObject(n).optString("id").equals("Panels/Panel4")) {
-          WorkState.profile = "Panels/Panel4";
-          break;
-        }
-    }
-    if (WorkState.card != null && WorkState.image != null) {
-      String p = WorkState.card.optString("profile");
-      JSONArray ps = WorkState.image.optJSONArray("profiles");
-      for (int n = 0; n < ps.length(); n++)
-        if (ps.optJSONObject(n).optString("id").equals(p)) {
-          WorkState.profile = p;
-          break;
-        }
-    }
-  }
-
   private void pick(int code) {
     Intent intent =
         new Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -540,6 +535,7 @@ public final class MainActivity extends Activity {
         app,
         false,
         () -> {
+          if (request == 1) WorkState.clearImage();
           File file = File.createTempFile("import-", extension, app.getFilesDir());
           boolean keep = false;
           try (InputStream in = app.getContentResolver().openInputStream(uri);
@@ -559,11 +555,10 @@ public final class MainActivity extends Activity {
               WorkState.custom = file.getAbsolutePath();
               WorkState.customAccepted = true;
             } else {
-              WorkState.image = null;
               WorkState.image =
                   new JSONObject(WorkState.engine.load(file.getAbsolutePath(), WorkState::event));
               WorkState.profile = "";
-              autoProfile();
+              WorkState.autoProfile();
             }
             keep = true;
             WorkState.message = "Ready";
@@ -603,13 +598,13 @@ public final class MainActivity extends Activity {
                   app,
                   false,
                   () -> {
-                    WorkState.image = null;
+                    WorkState.clearImage();
                     WorkState.image =
                         new JSONObject(
                             WorkState.engine.download(
                                 assets.getJSONObject(n).toString(), WorkState::event));
                     WorkState.profile = "";
-                    autoProfile();
+                    WorkState.autoProfile();
                     WorkState.message = "Ready";
                   });
             })
@@ -632,10 +627,13 @@ public final class MainActivity extends Activity {
         .setItems(
             labels,
             (d, n) -> {
-              pendingReader = readers.get(n);
+              UsbCard pendingReader = readers.get(n);
+              WorkState.pendingReader = pendingReader;
               UsbManager manager = (UsbManager) getSystemService(USB_SERVICE);
-              if (manager.hasPermission(pendingReader.device)) discover(pendingReader);
-              else {
+              if (manager.hasPermission(pendingReader.device)) {
+                WorkState.pendingReader = null;
+                discover(pendingReader);
+              } else {
                 Intent permission =
                     new Intent(getPackageName() + ".USB_PERMISSION").setPackage(getPackageName());
                 manager.requestPermission(
@@ -691,7 +689,7 @@ public final class MainActivity extends Activity {
             WorkState.selected = target;
             WorkState.update = WorkState.card.optBoolean("installed");
             WorkState.noROMs = WorkState.card.optBoolean("no_roms");
-            autoProfile();
+            WorkState.autoProfile();
             WorkState.message = "Ready";
           }
         });
