@@ -1,0 +1,10 @@
+Base DTBs of internal/dtbconv, made by scripts/update-dtbconv-bases.sh.
+kernel: rehearsal/final-20260929 (f3d3b0483) + night/o2-ee-uart5 (6b223a383) + night/o2-tf2-no-uhs (ec2a1ebe8)
+r36s.dtb.gz  = rk3326-r36s-android-panel4.dtb
+ee.dtb.gz    = rk3326-r36s-clone-g80-panel8.dtb
+soy.dtb.gz   = rk3326-r36s-clone-soysauce-panel5.dtb
+uboot.dtb.gz = device/gameconsole/r36s BOOT/uboot-dtb
+ee.dtb sha256 6e8f969e60e0409fc4a303cc5f32280a7723ef073cc1ad9b909d84ca72b6e80e
+r36s.dtb sha256 12f4885889e3f927f608bab2c4aee335ab9ffacde375793026f6a651375b0e8e
+soy.dtb sha256 ab472113f2883c91e227a7955c3db5479fb035aff822d721b1f842faf3fe4084
+uboot.dtb sha256 fcd325ee957987c8c2fb68d3098594bc58a22fb93ed7c8febe399ce5a6527c98
