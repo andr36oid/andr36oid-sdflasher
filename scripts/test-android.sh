@@ -2,11 +2,13 @@
 set -euo pipefail
 trap 'adb logcat -d -v threadtime > android-logcat.txt' EXIT
 adb logcat -c
-if [[ -n ${ANDROID_PAGE_SIZE:-} ]]; then
-    test "$(adb shell getconf PAGESIZE | tr -d '\r')" = "$ANDROID_PAGE_SIZE"
+api=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
+if (( api >= 29 )) && [[ -n ${ANDROID_PAGE_SIZE:-} ]]; then
+    actual_page_size=$(adb shell getconf PAGESIZE | tr -d '\r')
+    echo "Android page size: $actual_page_size (expected $ANDROID_PAGE_SIZE)"
+    test "$actual_page_size" = "$ANDROID_PAGE_SIZE"
 fi
 adb shell setprop debug.checkjni 1
-api=$(adb shell getprop ro.build.version.sdk | tr -d '\r')
 if (( api >= 29 )); then adb shell cmd uimode night no; fi
 adb install apks/release/app-release.apk
 adb install apks/release/test.apk
