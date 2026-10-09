@@ -136,7 +136,7 @@ public final class MainActivity extends Activity {
     TextView view = new TextView(this);
     view.setText(text);
     view.setTextSize(heading ? 19 : 15);
-    view.setTextColor(0xff18304a);
+    view.setTextColor(getColor(R.color.body_text));
     if (heading) view.setTypeface(null, android.graphics.Typeface.BOLD);
     view.setPadding(0, dp(9), 0, dp(9));
     body.addView(view);
@@ -160,7 +160,7 @@ public final class MainActivity extends Activity {
     body = new LinearLayout(this);
     body.setOrientation(LinearLayout.VERTICAL);
     body.setPadding(dp(18), dp(12), dp(18), dp(24));
-    body.setBackgroundColor(0xfff8fafd);
+    body.setBackgroundColor(getColor(R.color.surface));
     scroll.addView(body);
     page = new FrameLayout(this);
     page.addView(scroll);
@@ -217,8 +217,9 @@ public final class MainActivity extends Activity {
         t("Flasher %s is available", update.optString("version"))
             + "\n"
             + t("Tap to download the APK"));
-    notice.setTextColor(0xffffffff);
-    notice.setBackgroundTintList(android.content.res.ColorStateList.valueOf(0xff18304a));
+    notice.setTextColor(getColor(R.color.notice_text));
+    notice.setBackgroundTintList(
+        android.content.res.ColorStateList.valueOf(getColor(R.color.notice_surface)));
     FrameLayout.LayoutParams params =
         new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

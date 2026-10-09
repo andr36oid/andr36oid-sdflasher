@@ -1,0 +1,11 @@
+<resources>
+    <bool name="light_navigation_bar">false</bool>
+    <color name="surface">#F8FAFD</color>
+    <color name="body_text">#18304A</color>
+    <color name="accent">#1868C6</color>
+    <color name="navigation_surface">#18304A</color>
+    <color name="notice_surface">#18304A</color>
+    <color name="notice_text">#FFFFFF</color>
+    <color name="map_unused">#EEEEEE</color>
+    <color name="map_pending">#AAAAAA</color>
+</resources>

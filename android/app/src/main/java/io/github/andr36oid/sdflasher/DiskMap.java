@@ -18,6 +18,8 @@ final class DiskMap extends View {
 
   DiskMap(Context context) {
     super(context);
+    colors[0] = context.getColor(R.color.map_unused);
+    colors[1] = context.getColor(R.color.map_pending);
     setMinimumHeight((int) (140 * getResources().getDisplayMetrics().density));
   }
 

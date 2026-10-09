@@ -1,0 +1,4 @@
+<resources>
+    <bool name="light_navigation_bar">true</bool>
+    <color name="navigation_surface">#F8FAFD</color>
+</resources>

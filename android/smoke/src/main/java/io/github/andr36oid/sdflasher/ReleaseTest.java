@@ -65,6 +65,46 @@ public class ReleaseTest {
   }
 
   @Test
+  public void appearanceFollowsSystemMode() {
+    try (ActivityScenario<Activity> scenario =
+        ActivityScenario.launch(
+            new Intent().setClassName(context, "io.github.andr36oid.sdflasher.MainActivity"))) {
+      scenario.onActivity(
+          activity -> {
+            boolean dark =
+                (activity.getResources().getConfiguration().uiMode
+                        & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                    == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+            android.util.TypedValue light = new android.util.TypedValue();
+            assertTrue(
+                activity.getTheme().resolveAttribute(android.R.attr.isLightTheme, light, true));
+            assertEquals(!dark, light.data != 0);
+            TextView title = findText(activity.getWindow().getDecorView(), "andr36oid SD Flasher");
+            assertNotNull(title);
+            int background =
+                ((android.graphics.drawable.ColorDrawable)
+                        ((View) title.getParent()).getBackground())
+                    .getColor();
+            assertEquals(dark, android.graphics.Color.red(title.getCurrentTextColor()) > 128);
+            assertEquals(!dark, android.graphics.Color.red(background) > 128);
+            android.app.AlertDialog dialog =
+                new android.app.AlertDialog.Builder(activity)
+                    .setMessage("Theme check")
+                    .setPositiveButton("OK", null)
+                    .create();
+            dialog.show();
+            assertTrue(
+                dialog
+                    .getContext()
+                    .getTheme()
+                    .resolveAttribute(android.R.attr.isLightTheme, light, true));
+            assertEquals(!dark, light.data != 0);
+            dialog.dismiss();
+          });
+    }
+  }
+
+  @Test
   public void languageChoiceSurvivesRecreation() {
     try (ActivityScenario<Activity> scenario =
         ActivityScenario.launch(
