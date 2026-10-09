@@ -21,6 +21,7 @@ Section: utils
 Priority: optional
 Description: Native microSD installer and updater for andr36oid
 CONTROL
+python3 scripts/check-icons.py linux "$pkg/usr"
 dpkg-deb --root-owner-group --build "$pkg" "dist/andr36oid-sdflasher-${version}-linux-${arch}.deb"
 appdir=build/AppDir
 mkdir -p "$appdir/usr/bin" "$appdir/usr/share/licenses/andr36oid-sdflasher" "$appdir/usr/share/metainfo"
@@ -31,3 +32,4 @@ curl --fail --location --retry 3 "https://github.com/linuxdeploy/linuxdeploy/rel
 printf '%s  %s\n' "$deploysum" build/linuxdeploy | sha256sum --check
 chmod +x build/linuxdeploy
 APPIMAGE_EXTRACT_AND_RUN=1 LDAI_OUTPUT="dist/andr36oid-sdflasher-${version}-linux-${arch}.AppImage" build/linuxdeploy --appdir "$appdir" --executable build/andr36oid-sdflasher --desktop-file packaging/io.github.andr36oid.sdflasher.desktop --icon-file packaging/io.github.andr36oid.sdflasher.svg --output appimage
+python3 scripts/check-icons.py appimage "$appdir"

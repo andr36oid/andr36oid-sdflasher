@@ -22,6 +22,7 @@ apk="dist/andr36oid-sdflasher-${VERSION:-development}-android-universal.apk"
 "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --min-sdk-version 23 "$apk"
 "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 4 "$apk"
 python3 scripts/check-android-apk.py "$apk"
+python3 scripts/check-icons.py android "$apk" "$ANDROID_HOME/build-tools/36.0.0/aapt"
 cp android/app/build/outputs/mapping/release/mapping.txt "dist/andr36oid-sdflasher-${VERSION:-development}-android-mapping.txt"
 (cd dist && sha256sum andr36oid-sdflasher-*-android-universal.apk andr36oid-sdflasher-*-android-mapping.txt > SHA256SUMS-android)
 mkdir -p build/android-test-inputs/{release,debug,androidTest/debug}

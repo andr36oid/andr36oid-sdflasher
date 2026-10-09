@@ -52,6 +52,7 @@ type screen struct {
 
 func Run() {
 	a := app.NewWithID("io.github.andr36oid.sdflasher")
+	a.SetIcon(appIcon)
 	a.Settings().SetTheme(uiTheme())
 	w := a.NewWindow("andr36oid SD Flasher")
 	s := &screen{win: w, locale: preferredLocale(a)}

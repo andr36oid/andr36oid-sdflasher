@@ -84,6 +84,7 @@ jobs:
           cp build/andr36oid-sdflasher build/andr36oid-sdflasher-helper build/flatpak-input/
           cp -r build/licenses build/flatpak-input/
           flatpak-builder --user --force-clean --repo=build/flatpak-repo build/flatpak packaging/io.github.andr36oid.sdflasher.yml
+          python3 scripts/check-icons.py linux build/flatpak/files
           flatpak build-bundle build/flatpak-repo "dist/andr36oid-sdflasher-${VERSION}-linux-${{ matrix.arch }}.flatpak" io.github.andr36oid.sdflasher
       - name: macOS bundle
         if: matrix.target == 'macos'
