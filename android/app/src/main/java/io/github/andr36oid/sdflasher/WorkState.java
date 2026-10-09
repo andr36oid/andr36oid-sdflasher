@@ -36,6 +36,7 @@ final class WorkState {
   static volatile JSONObject conversion;
   static volatile String conversionPath = "", conversionRefused = "";
   static volatile long revision = 0;
+  static volatile int step = 0;
   static Work pending;
   static boolean usbJob;
 

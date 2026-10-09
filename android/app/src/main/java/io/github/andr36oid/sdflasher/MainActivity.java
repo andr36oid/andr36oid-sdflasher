@@ -18,7 +18,13 @@ import org.json.*;
 public final class MainActivity extends Activity {
   private final Handler handler = new Handler(Looper.getMainLooper());
   private long rendered = -1;
-  private LinearLayout body;
+  private LinearLayout body, target;
+  // setup steps: image, card, console, options, write
+  private static final String[] STEPS = {"Release", "Card", "Console", "Options", "Write"};
+  private final LinearLayout[] sections = new LinearLayout[STEPS.length];
+  private TextView stepLabel, modeHelp, summary, help;
+  private Button back, next;
+  private LinearLayout storage;
   private FrameLayout page;
   private Button updateNotice;
   private TextView imageLabel, cardLabel, status, customLabel, mapLegend;
@@ -150,7 +156,7 @@ public final class MainActivity extends Activity {
     view.setTextColor(getColor(R.color.body_text));
     if (heading) view.setTypeface(null, android.graphics.Typeface.BOLD);
     view.setPadding(0, dp(9), 0, dp(9));
-    body.addView(view);
+    target.addView(view);
     return view;
   }
 
@@ -159,7 +165,7 @@ public final class MainActivity extends Activity {
     view.setText(t(key));
     view.setAllCaps(false);
     view.setOnClickListener(action);
-    body.addView(view);
+    target.addView(view);
     controls.add(view);
     return view;
   }
@@ -172,6 +178,7 @@ public final class MainActivity extends Activity {
     body.setOrientation(LinearLayout.VERTICAL);
     body.setPadding(dp(18), dp(12), dp(18), dp(24));
     body.setBackgroundColor(getColor(R.color.surface));
+    target = body;
     scroll.addView(body);
     page = new FrameLayout(this);
     page.addView(scroll);
@@ -268,22 +275,56 @@ public final class MainActivity extends Activity {
         duration);
   }
 
+  private LinearLayout section(int step) {
+    LinearLayout view = new LinearLayout(this);
+    view.setOrientation(LinearLayout.VERTICAL);
+    body.addView(view);
+    sections[step] = view;
+    target = view;
+    return view;
+  }
+
   private void build() {
     createPage();
-    label("andr36oid SD Flasher", true);
+    LinearLayout top = new LinearLayout(this);
+    top.setOrientation(LinearLayout.HORIZONTAL);
+    top.setGravity(Gravity.CENTER_VERTICAL);
+    body.addView(top);
+    target = top;
+    label("andr36oid SD Flasher", true)
+        .setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
     language = new Button(this);
     language.setAllCaps(false);
     language.setText(I18n.name(this));
     language.setOnClickListener(v -> languages());
-    body.addView(language);
-    label(t("Set up or update your andr36oid card"), true);
+    top.addView(language);
+    target = body;
+    label(t("Set up or update your andr36oid card"), false);
+    stepLabel = label("", true);
+    stepLabel.setTextColor(getColor(R.color.accent));
+
+    section(0);
+    label(t("Choose the andr36oid release"), true);
     label(
-        t("Connect a USB card reader directly to your Android device. No root is needed."), false);
-    label(t("1. Release"), true);
+        t(
+            "Download a release, or choose an image file you already have. Only Treble images can"
+                + " be installed."),
+        false);
     button("Download a release…", v -> releases());
     button("Choose image from disk…", v -> pick(1));
     imageLabel = label("", false);
-    label(t("2. Console and screen"), true);
+
+    section(1);
+    label(t("Choose the microSD card"), true);
+    label(
+        t("Connect a USB card reader directly to your Android device. No root is needed."), false);
+    label(t("The card is only read now. Nothing is written before the last step."), false);
+    chooseCard = button("Select a microSD card", v -> readers());
+    cardLabel = label("", false);
+
+    section(2);
+    label(t("Choose your console"), true);
+    label(t("Choose the board family first, then the board and screen."), false);
     console = button("Choose your console / board family", v -> chooseConsole());
     profile = button("Choose your board and screen", v -> chooseProfile());
     button(
@@ -293,6 +334,8 @@ public final class MainActivity extends Activity {
                 "Finding your board and panel",
                 "Use your console’s board markings and screen information. Similar-looking consoles"
                     + " can require different DTBs."));
+    label(t("DTB"), true);
+    customLabel = label("", false);
     button("Use my console’s own DTB file…", v -> chooseOwnDTB());
     button(
         "Advanced: custom DTB",
@@ -310,10 +353,9 @@ public final class MainActivity extends Activity {
                       WorkState.revision++;
                     })
                 .show());
-    customLabel = label("", false);
-    label(t("3. microSD card"), true);
-    chooseCard = button("Select a microSD card", v -> readers());
-    cardLabel = label("", false);
+
+    section(3);
+    label(t("What should happen to the card?"), true);
     RadioGroup modes = new RadioGroup(this);
     install = new RadioButton(this);
     update = new RadioButton(this);
@@ -323,7 +365,7 @@ public final class MainActivity extends Activity {
     update.setText(t("Update an existing installation"));
     modes.addView(install);
     modes.addView(update);
-    body.addView(modes);
+    target.addView(modes);
     controls.add(install);
     controls.add(update);
     modes.setOnCheckedChangeListener(
@@ -333,28 +375,89 @@ public final class MainActivity extends Activity {
             WorkState.noROMs = WorkState.card.optBoolean("no_roms");
           WorkState.revision++;
         });
+    modeHelp = label("", false);
+    label(t("Storage"), true);
     noROMs = new CheckBox(this);
     noROMs.setText(t("Use all available storage for Android"));
-    body.addView(noROMs);
-    noROMs.setOnCheckedChangeListener((b, checked) -> WorkState.noROMs = checked);
+    target.addView(noROMs);
+    noROMs.setOnCheckedChangeListener(
+        (b, checked) -> {
+          WorkState.noROMs = checked;
+          WorkState.revision++;
+        });
     label(
         t(
             "Unchecked: reserve 16 GiB for Android and use the remaining space for a games"
                 + " partition readable on your computer. Updates keep the existing arrangement."),
         false);
-    action = button("Continue", v -> review());
+    // More storage choices (such as a userdata size slider) go here.
+    storage = new LinearLayout(this);
+    storage.setOrientation(LinearLayout.VERTICAL);
+    target.addView(storage);
+
+    section(4);
+    label(t("Check and write"), true);
+    summary = label("", false);
+    help = label("", false);
+    action = button("Erase and write this card…", v -> review());
+    map = new DiskMap(this);
+    target.addView(map, new LinearLayout.LayoutParams(-1, dp(160)));
+    mapLegend = label(t("Pending · Writing · Written · Verified · Preserved"), false);
+
+    target = body;
     progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
     progress.setMax(1000);
     body.addView(progress);
     status = label("", false);
-    map = new DiskMap(this);
-    body.addView(map, new LinearLayout.LayoutParams(-1, dp(160)));
-    mapLegend = label(t("Pending · Writing · Written · Verified · Preserved"), false);
+    LinearLayout nav = new LinearLayout(this);
+    nav.setOrientation(LinearLayout.HORIZONTAL);
+    body.addView(nav);
+    target = nav;
+    back = button("Back", v -> showStep(WorkState.step - 1));
+    next = button("Next", v -> showStep(WorkState.step + 1));
+    back.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+    next.setLayoutParams(new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+    target = body;
     button("Restore an interrupted update…", v -> recover());
     button("About and licenses", v -> about());
     label(BuildConfig.VERSION_NAME + " · GPLv3", false);
     rendered = -1;
     render();
+  }
+
+  private void showStep(int step) {
+    if (step < 0 || step >= STEPS.length || !reachable(step)) return;
+    WorkState.step = step;
+    WorkState.revision++;
+  }
+
+  private boolean stepDone(int step) {
+    switch (step) {
+      case 0:
+        return WorkState.image != null;
+      case 1:
+        return WorkState.card != null && WorkState.selected != null;
+      case 2:
+        return !WorkState.profile.isEmpty();
+      case 3:
+        return !WorkState.update
+            || (WorkState.card != null && WorkState.card.optBoolean("installed"));
+      default:
+        return false;
+    }
+  }
+
+  private boolean reachable(int step) {
+    for (int n = 0; n < step; n++) if (!stepDone(n)) return false;
+    return true;
+  }
+
+  private String dtbText() {
+    if (WorkState.custom.isEmpty()) return t("Use the DTB shipped with the selected profile.");
+    String name = new File(WorkState.custom).getName();
+    return WorkState.convertDTB
+        ? t("Converted from your console’s DTB: %s", name)
+        : t("Custom Android DTB") + ": " + name;
   }
 
   private void languages() {
@@ -386,12 +489,7 @@ public final class MainActivity extends Activity {
         WorkState.image == null
             ? t("Choose a release to see its supported consoles and panels.")
             : WorkState.image.optString("version"));
-    customLabel.setText(
-        WorkState.custom.isEmpty()
-            ? t("Use the DTB shipped with the selected profile.")
-            : WorkState.convertDTB
-                ? t("Converted from your console’s DTB: %s", new File(WorkState.custom).getName())
-                : t("Custom Android DTB") + ": " + new File(WorkState.custom).getName());
+    customLabel.setText(dtbText());
     JSONObject selected = selectedProfile();
     console.setText(
         selected == null ? t("Choose your console / board family") : selected.optString("console"));
@@ -414,8 +512,62 @@ public final class MainActivity extends Activity {
     update.setEnabled(!busy && installed);
     noROMs.setChecked(WorkState.noROMs);
     noROMs.setEnabled(!busy && !WorkState.update);
-    action.setEnabled(
-        !busy && WorkState.image != null && WorkState.card != null && !WorkState.profile.isEmpty());
+    boolean ready = true;
+    for (int n = 0; n < 4; n++) ready &= stepDone(n);
+    action.setEnabled(!busy && ready);
+    // a step that lost what it needs (card removed, new image) sends the user back
+    while (WorkState.step > 0 && !reachable(WorkState.step)) WorkState.step--;
+    int step = WorkState.step;
+    for (int n = 0; n < sections.length; n++)
+      sections[n].setVisibility(n == step ? View.VISIBLE : View.GONE);
+    stepLabel.setText(t("Step %d of %d: %s", step + 1, STEPS.length, t(STEPS[step])));
+    back.setEnabled(!busy && step > 0);
+    next.setVisibility(step == STEPS.length - 1 ? View.INVISIBLE : View.VISIBLE);
+    next.setEnabled(!busy && stepDone(step));
+    int danger = android.graphics.Color.rgb(0xE5, 0x39, 0x35);
+    modeHelp.setText(
+        WorkState.update
+            ? t("Apps, settings, saves, and games will be preserved.")
+            : t("Everything currently on this card will be erased."));
+    modeHelp.setTextColor(WorkState.update ? getColor(R.color.body_text) : danger);
+    JSONObject chosen = selectedProfile();
+    summary.setText(
+        t("Release")
+            + ": "
+            + (WorkState.image == null ? "" : WorkState.image.optString("version"))
+            + "\n"
+            + t("microSD card")
+            + ": "
+            + (WorkState.selected == null ? "" : WorkState.selected.label())
+            + "\n"
+            + t("Device profile")
+            + ": "
+            + (chosen == null ? "" : chosen.optString("name"))
+            + "\n"
+            + t("DTB")
+            + ": "
+            + dtbText()
+            + "\n"
+            + t("Action")
+            + ": "
+            + t(WorkState.update ? "Update an existing installation" : "Install a new card (erase)")
+            + "\n"
+            + t("Storage")
+            + ": "
+            + (WorkState.update
+                ? t("Kept as it is")
+                : WorkState.noROMs
+                    ? t("Use all available storage for Android")
+                    : t("Android 16 GiB, the rest for games")));
+    help.setText(
+        WorkState.update
+            ? t(
+                "BOOT, system, and vendor will be updated together. The dedicated cache will be"
+                    + " cleared. Userdata and games stay in place. A recovery backup will be"
+                    + " saved before writing.")
+            : t("Everything currently on this card will be erased."));
+    help.setTextColor(WorkState.update ? getColor(R.color.body_text) : danger);
+    action.setText(t(WorkState.update ? "Update this card…" : "Erase and write this card…"));
     JSONObject p = WorkState.progress;
     String phase = p == null ? "" : p.optString("phase");
     status.setText(
@@ -512,6 +664,12 @@ public final class MainActivity extends Activity {
                 + (p.optBoolean("experimental") ? " (" + t("experimental") + ")" : ""));
       }
     }
+    if (profiles.size() == 1) {
+      // a console with one profile (R46H, R50S, ...) needs no second choice
+      WorkState.profile = profiles.get(0).optString("id");
+      WorkState.revision++;
+      return;
+    }
     new AlertDialog.Builder(this)
         .setTitle(t("Choose your board and screen"))
         .setItems(
@@ -590,6 +748,7 @@ public final class MainActivity extends Activity {
                   new JSONObject(WorkState.engine.load(file.getAbsolutePath(), WorkState::event));
               WorkState.profile = "";
               WorkState.autoProfile();
+              if (WorkState.step == 0) WorkState.step = 1;
             }
             keep = true;
             WorkState.message = "Ready";
@@ -708,6 +867,7 @@ public final class MainActivity extends Activity {
                                 assets.getJSONObject(n).toString(), WorkState::event));
                     WorkState.profile = "";
                     WorkState.autoProfile();
+                    if (WorkState.step == 0) WorkState.step = 1;
                     WorkState.message = "Ready";
                   });
             })
