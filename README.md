@@ -11,6 +11,8 @@ The new partitioning layout enables two things: Project Treble compatibility (an
 ## what is it not
 an effin web browser pretending to be an app (looking at you etcher)
 
+faster than rufus. this app will be slower than rufus. it validates what it writes as it writes to your card. this is because many cards, frankly, suck. this has led to many an inquiry in our telegram chat, and a better sd card usually solved the problem. I hope that readback verification will catch unsuitable SD cards before you put them in your console and be disappointed by the OS not booting.
+
 ## how use
 Go to GitHub releases, and download the binary for your platform. You can use Windows, Linux, macOS and Android.
 
