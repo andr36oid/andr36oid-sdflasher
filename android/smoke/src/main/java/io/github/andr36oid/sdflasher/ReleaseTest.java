@@ -75,10 +75,7 @@ public class ReleaseTest {
                 (activity.getResources().getConfiguration().uiMode
                         & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
                     == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-            android.util.TypedValue light = new android.util.TypedValue();
-            assertTrue(
-                activity.getTheme().resolveAttribute(android.R.attr.isLightTheme, light, true));
-            assertEquals(!dark, light.data != 0);
+            assertThemeIsDark(activity, dark);
             TextView title = findText(activity.getWindow().getDecorView(), "andr36oid SD Flasher");
             assertNotNull(title);
             int background =
@@ -93,14 +90,20 @@ public class ReleaseTest {
                     .setPositiveButton("OK", null)
                     .create();
             dialog.show();
-            assertTrue(
-                dialog
-                    .getContext()
-                    .getTheme()
-                    .resolveAttribute(android.R.attr.isLightTheme, light, true));
-            assertEquals(!dark, light.data != 0);
+            assertThemeIsDark(dialog.getContext(), dark);
             dialog.dismiss();
           });
+    }
+  }
+
+  private void assertThemeIsDark(Context themed, boolean dark) {
+    android.content.res.TypedArray colors =
+        themed.obtainStyledAttributes(new int[] {android.R.attr.textColorPrimary});
+    try {
+      assertEquals(
+          dark, android.graphics.Color.red(colors.getColorStateList(0).getDefaultColor()) > 128);
+    } finally {
+      colors.recycle();
     }
   }
 
