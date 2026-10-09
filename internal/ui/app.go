@@ -47,6 +47,13 @@ type screen struct {
 	noROMs                              *widget.Check
 	action, local, online, refresh      *widget.Button
 	customLabel                         *widget.Label
+	step                                int
+	pages                               []*fyne.Container
+	stepButtons                         [stepCount]*widget.Button
+	back, next                          *widget.Button
+	storage                             *fyne.Container
+	sumValues                           [6]*widget.Label
+	modeHelp                            *widget.Label
 	progress                            *widget.ProgressBar
 	cancel                              context.CancelFunc
 }
@@ -83,16 +90,20 @@ func wrapped(text string) *widget.Label {
 	return l
 }
 func (s *screen) build() {
-	oldProfile, oldUpdate, oldROMs := s.profile, s.updating, false
+	oldProfile, oldUpdate, oldROMs, oldStep := s.profile, s.updating, false, s.step
 	if s.noROMs != nil {
 		oldROMs = s.noROMs.Checked
 	}
 	s.action = nil
+	s.pages = nil
+	s.stepButtons = [stepCount]*widget.Button{}
 	s.releaseLabel = wrapped(s.t("Choose a release to see its supported consoles and panels."))
 	s.cardLabel = wrapped(s.t("Insert a microSD card, then select it below."))
-	s.help = wrapped(s.t("For a new installation, everything on the selected card will be erased. An update preserves apps, settings, saves, and the games partition."))
+	s.help = wrapped("")
+	s.modeHelp = wrapped("")
 	s.local = widget.NewButton(s.t("Choose image from disk…"), s.chooseImage)
 	s.online = widget.NewButton(s.t("Download a release…"), s.releases)
+	s.online.Importance = widget.HighImportance
 	s.refresh = widget.NewButton(s.t("Refresh cards"), s.listDrives)
 	s.console = widget.NewSelect(nil, func(name string) {
 		s.profile = ""
@@ -133,7 +144,8 @@ func (s *screen) build() {
 	s.profileSelect.PlaceHolder = s.t("Choose your board and screen")
 	s.driveSelect = widget.NewSelect(nil, nil)
 	s.driveSelect.PlaceHolder = s.t("Select a microSD card")
-	s.noROMs = widget.NewCheck(s.t("Use all available storage for Android"), nil)
+	s.noROMs = widget.NewCheck(s.t("Use all available storage for Android"), func(bool) { s.ready() })
+	s.storage = container.NewVBox()
 	s.mode = widget.NewRadioGroup([]string{s.t("Install a new card (erase)"), s.t("Update an existing installation")}, func(v string) {
 		s.updating = v == s.t("Update an existing installation")
 		if s.updating {
@@ -141,9 +153,18 @@ func (s *screen) build() {
 			if s.card != nil {
 				s.noROMs.SetChecked(s.card.NoROMs)
 			}
+			s.modeHelp.SetText(s.t("Apps, settings, saves, and games will be preserved."))
+			s.modeHelp.Importance = widget.MediumImportance
+			if s.card != nil && !s.card.Installed {
+				s.modeHelp.SetText(s.t("New installation required") + ": " + s.card.Reason)
+				s.modeHelp.Importance = widget.DangerImportance
+			}
 		} else {
 			s.noROMs.Enable()
+			s.modeHelp.SetText(s.t("Everything currently on this card will be erased."))
+			s.modeHelp.Importance = widget.DangerImportance
 		}
+		s.modeHelp.Refresh()
 		s.ready()
 	})
 	s.mode.SetSelected(s.t("Install a new card (erase)"))
@@ -153,23 +174,17 @@ func (s *screen) build() {
 		s.custom = ""
 		s.customAccepted = false
 		s.convert = false
-		s.customLabel.SetText(s.t("Use the DTB shipped with the selected profile."))
+		s.customLabel.SetText(s.dtbText())
+		s.ready()
 	})
-	advanced := widget.NewAccordion(widget.NewAccordionItem(s.t("Advanced: custom DTB"), container.NewVBox(wrapped(s.t(firmware.CustomWarning)), s.customLabel, container.NewHBox(custom, clear))))
+	advanced := widget.NewAccordion(widget.NewAccordionItem(s.t("Advanced: custom DTB"), container.NewVBox(wrapped(s.t(firmware.CustomWarning)), container.NewHBox(custom, clear))))
 	s.action = widget.NewButton(s.t("Continue"), s.confirm)
-	s.action.Importance = widget.HighImportance
+	s.action.Importance = widget.DangerImportance
 	s.action.Disable()
 	s.progress = widget.NewProgressBar()
 	s.progress.Hide()
-	body := container.NewVBox(widget.NewLabelWithStyle(s.t("Set up or update your andr36oid card"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), wrapped(s.t("Choose your release and console. We’ll prepare the card and check the result.")), widget.NewSeparator(), widget.NewLabelWithStyle(s.t("1. Release"), 0, fyne.TextStyle{Bold: true}), container.NewHBox(s.online, s.local), s.releaseLabel, s.progress, widget.NewLabelWithStyle(s.t("2. Console and screen"), 0, fyne.TextStyle{Bold: true}), s.console, s.profileSelect, widget.NewButton(s.t("I don’t know my board or panel"), func() {
-		s.info(s.t("Finding your board and panel"), s.t("An existing andr36oid card may identify its selected profile. For a new card, use your console’s board markings and the panel information from its supplier. Similar-looking R36S consoles can have different wiring. Choose the board family first; a panel number alone is not enough. If your console is missing here, this release does not ship its profile."), s.win)
-	}), widget.NewButton(s.t(ownDTBButton), s.chooseOwnDTB), advanced, widget.NewLabelWithStyle(s.t("3. microSD card"), 0, fyne.TextStyle{Bold: true}), container.NewBorder(nil, nil, nil, s.refresh, s.driveSelect), s.cardLabel, s.mode, s.noROMs, wrapped(s.t("Unchecked: reserve 16 GiB for Android and use the remaining space for a games partition readable on your computer. Updates keep the existing arrangement.")))
-	s.language = widget.NewButton(s.languageName(), s.chooseLanguage)
-	s.updateBanner = container.NewVBox()
-	s.renderAppUpdate()
-	header := container.NewVBox(container.NewBorder(nil, nil, nil, s.language, widget.NewLabel("andr36oid SD Flasher")), s.updateBanner)
-	s.home = container.NewBorder(header, container.NewVBox(s.help, s.action, container.NewHBox(widget.NewButton(s.t("Restore an interrupted update…"), s.recover), widget.NewLabel("GPLv3 · "+Version))), nil, nil, container.NewVScroll(body))
-	s.win.SetContent(s.home)
+	s.sumValues = [6]*widget.Label{}
+	s.pages = s.pagesFor(advanced)
 	s.populateImage()
 	s.profile = oldProfile
 	s.selectProfile(oldProfile)
@@ -177,27 +192,51 @@ func (s *screen) build() {
 	if oldUpdate {
 		s.mode.SetSelected(s.t("Update an existing installation"))
 	}
-	if s.convert {
-		s.customLabel.SetText(s.t(ownDTBLabel, filepath.Base(s.custom)))
-	} else if s.custom != "" {
-		s.customLabel.SetText(s.t("Custom Android DTB") + ": " + filepath.Base(s.custom))
-	}
+	s.customLabel.SetText(s.dtbText())
 	s.populateDrives(false)
 	s.cardDescription()
+	var bar []fyne.CanvasObject
+	for i := range s.stepButtons {
+		step := i
+		s.stepButtons[i] = widget.NewButton("", func() { s.showStep(step) })
+		bar = append(bar, s.stepButtons[i])
+	}
+	s.back = widget.NewButton(s.t("Back"), func() { s.showStep(s.step - 1) })
+	s.next = widget.NewButton(s.t("Next"), func() { s.showStep(s.step + 1) })
+	s.next.Importance = widget.HighImportance
+	s.language = widget.NewButton(s.languageName(), s.chooseLanguage)
+	s.updateBanner = container.NewVBox()
+	s.renderAppUpdate()
+	header := container.NewVBox(
+		container.NewBorder(nil, nil, nil, s.language, widget.NewLabelWithStyle("andr36oid SD Flasher", 0, fyne.TextStyle{Bold: true})),
+		s.updateBanner,
+		container.NewGridWithColumns(stepCount, bar...),
+		widget.NewSeparator())
+	var pages []fyne.CanvasObject
+	for _, p := range s.pages {
+		pages = append(pages, p)
+	}
+	footer := container.NewVBox(
+		widget.NewSeparator(),
+		container.NewBorder(nil, nil, s.back, s.next),
+		container.NewBorder(nil, nil, widget.NewButton(s.t("Restore an interrupted update…"), s.recover), widget.NewLabel("GPLv3 · "+Version)))
+	s.home = container.NewPadded(container.NewBorder(header, footer, nil, nil, container.NewVScroll(container.NewStack(pages...))))
+	s.win.SetContent(s.home)
+	s.showStep(oldStep)
 	s.ready()
 }
 func (s *screen) ready() {
 	if s.action == nil {
 		return
 	}
-	if !s.busy && s.im != nil && s.drive != nil && s.card != nil && s.profile != "" {
-		if s.updating && !s.card.Installed {
-			s.action.Disable()
-			return
-		}
+	if !s.busy && s.im != nil && s.drive != nil && s.card != nil && s.profile != "" && !(s.updating && !s.card.Installed) {
 		s.action.Enable()
 	} else {
 		s.action.Disable()
+	}
+	s.refreshSteps()
+	if s.step == stepWrite {
+		s.summarize()
 	}
 }
 func (s *screen) setBusy(v bool) {
@@ -280,6 +319,9 @@ func (s *screen) loadImage(p string) {
 			s.im = im
 			s.populateImage()
 			s.autoProfile()
+			if s.step == stepImage {
+				s.showStep(stepCard)
+			}
 			s.ready()
 		})
 	}()
@@ -541,7 +583,11 @@ func (s *screen) write(p *flash.Plan) {
 	s.setBusy(true)
 	m := newDiskMap()
 	m.plan(p)
+	title := heading(s.t("Writing your andr36oid card"))
 	phase := wrapped(s.t("Preparing to write. Keep the card connected."))
+	phase.TextStyle = fyne.TextStyle{Bold: true}
+	outcome := wrapped("")
+	outcome.Hide()
 	bar := widget.NewProgressBar()
 	details := wrapped(s.t("Each block summarizes a region of the card. Preserved regions are never written."))
 	back := widget.NewButton(s.t("Back to setup"), func() {
@@ -549,11 +595,14 @@ func (s *screen) write(p *flash.Plan) {
 		s.card = nil
 		s.drive = nil
 		s.driveSelect.ClearSelected()
+		s.showStep(stepCard)
 		s.setBusy(false)
 		s.listDrives()
 	})
 	back.Disable()
-	s.win.SetContent(container.NewPadded(container.NewVBox(widget.NewLabelWithStyle(s.t("Writing your andr36oid card"), 0, fyne.TextStyle{Bold: true}), widget.NewLabel(s.drive.Label()), m.img, legend(s.locale), phase, bar, details, back)))
+	back.Importance = widget.HighImportance
+	s.win.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(title, widget.NewLabel(s.drive.Label()), widget.NewSeparator()), back, nil, nil,
+		container.NewVScroll(container.NewVBox(phase, bar, outcome, m.img, legend(s.locale), details)))))
 	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert}
 	go func() {
 		result, e := jobs.Run(req, func(p flash.Progress) {
@@ -569,13 +618,18 @@ func (s *screen) write(p *flash.Plan) {
 			s.busy = false
 			back.Enable()
 			if e != nil {
-				phase.SetText(s.t("Operation could not finish") + ": " + e.Error())
+				title.SetText(s.t("Operation could not finish"))
+				phase.SetText(s.t("Check the selected image and card, then try again."))
+				outcome.SetText(s.t("Technical details") + ": " + e.Error())
+				outcome.Importance = widget.DangerImportance
+				outcome.Show()
 				if result.Backup != "" {
 					details.SetText(s.t("Recovery backups") + ": " + result.Backup)
 				}
 				return
 			}
 			bar.SetValue(1)
+			title.SetText(s.t("Written and verified"))
 			phase.SetText(s.t("Your card has been written and verified."))
 			if p.Mode == "install" {
 				details.SetText(s.t("Safely eject the card and insert it into the console’s system card slot. The first boot prepares storage and restarts the console. Keep it powered on until Android setup appears. If the screen stays blank, check the chosen board and panel profile."))
