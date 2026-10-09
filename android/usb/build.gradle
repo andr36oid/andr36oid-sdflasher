@@ -3,7 +3,7 @@ android {
     namespace 'me.jahnen.libaums.core'
     compileSdk 36
     buildFeatures { buildConfig true }
-    ndkVersion '26.1.10909125'
+    ndkVersion '28.2.13676358'
     defaultConfig {
         minSdk 23
         externalNativeBuild { cmake { arguments "-DUSB_SOURCE=${rootDir}/../build/usb-source" } }

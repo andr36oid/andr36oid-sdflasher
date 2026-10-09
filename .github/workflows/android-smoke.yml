@@ -18,8 +18,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {api: 23, arch: x86}
-          - {api: 35, arch: x86_64}
+          - {api: 23, arch: x86, target: default, pages: 4096}
+          - {api: 35, arch: x86_64, target: default, pages: 4096}
+          - {api: 35, arch: x86_64, target: google_apis_ps16k, pages: 16384}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -34,16 +35,18 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ANDROID_PAGE_SIZE: ${{ matrix.pages }}
         with:
           api-level: ${{ matrix.api }}
           arch: ${{ matrix.arch }}
-          target: default
+          target: ${{ matrix.target }}
           disable-animations: true
           script: bash scripts/test-android.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: android-smoke-${{ matrix.api }}
+          name: android-smoke-${{ matrix.api }}-${{ matrix.pages }}
           path: |
             instrumentation*.txt
             android-logcat.txt

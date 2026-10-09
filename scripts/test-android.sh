@@ -2,6 +2,9 @@
 set -euo pipefail
 trap 'adb logcat -d -v threadtime > android-logcat.txt' EXIT
 adb logcat -c
+if [[ -n ${ANDROID_PAGE_SIZE:-} ]]; then
+    test "$(adb shell getconf PAGE_SIZE | tr -d '\r')" = "$ANDROID_PAGE_SIZE"
+fi
 adb shell setprop debug.checkjni 1
 adb install apks/release/app-release.apk
 adb install apks/release/test.apk

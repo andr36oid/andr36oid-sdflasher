@@ -2,7 +2,7 @@
 set -euo pipefail
 export ANDROID_HOME=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}
 : "${ANDROID_HOME:?Set ANDROID_HOME to your Android SDK}"
-export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/26.1.10909125"
+export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
 go_bin="$(go env GOPATH)/bin"
 export PATH="$go_bin:$PATH"
 mobile_revision=v0.0.0-20260908204917-8b95e45f8d3e
