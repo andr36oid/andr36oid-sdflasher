@@ -13,6 +13,15 @@ import (
 	"strings"
 )
 
+// UBootDTBNames are the fixed names U-Boot loads its screen setup from, whatever the
+// console: the old ArkOS-style U-Boot and the U-Boot on the eMMC of some clones read
+// rg351*-kernel.dtb, the andr36oid U-Boot (github.com/andr36oid/u-boot) reads
+// rg351*-uboot.dtb, each picking the variant by its board id.
+var UBootDTBNames = []string{
+	"rg351mp-kernel.dtb", "rg351p-kernel.dtb", "rg351v-kernel.dtb",
+	"rg351mp-uboot.dtb", "rg351p-uboot.dtb", "rg351v-uboot.dtb",
+}
+
 const CustomWarning = "Custom DTBs must be built specifically for andr36oid. DTBs from other custom firmwares are unlikely to work."
 
 func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir string, opts ...BootOptions) (string, error) {
@@ -121,7 +130,7 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 			return "", e
 		}
 		if strings.HasSuffix(n, ".dtb") {
-			for _, alias := range []string{"rg351mp-kernel.dtb", "rg351p-kernel.dtb", "rg351v-kernel.dtb"} {
+			for _, alias := range UBootDTBNames {
 				if e = write(alias, b); e != nil {
 					return "", e
 				}
