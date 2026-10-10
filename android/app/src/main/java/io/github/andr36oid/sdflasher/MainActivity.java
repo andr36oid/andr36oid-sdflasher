@@ -29,6 +29,7 @@ public final class MainActivity extends Activity {
   private SeekBar sizeBar;
   private Button sizeAuto;
   private int sizeMin = 4;
+  private TextView systemLabel;
   private FrameLayout page;
   private Button updateNotice;
   private TextView imageLabel, cardLabel, status, customLabel, mapLegend;
@@ -423,6 +424,21 @@ public final class MainActivity extends Activity {
           WorkState.revision++;
         });
     storage.addView(sizeAuto);
+    systemLabel = label("", false);
+    button(
+        "Advanced: different system image (GSI)",
+        v ->
+            new AlertDialog.Builder(this)
+                .setTitle(t("Advanced: different system image (GSI)"))
+                .setMessage(t(Mobile.gsiWarning()))
+                .setPositiveButton(t("Choose system image…"), (d, w) -> pick(4))
+                .setNegativeButton(
+                    t("Use the andr36oid system"),
+                    (d, w) -> {
+                      WorkState.clearSystem();
+                      WorkState.revision++;
+                    })
+                .show());
 
     section(4);
     label(t("Check and write"), true);
@@ -542,6 +558,7 @@ public final class MainActivity extends Activity {
     noROMs.setChecked(WorkState.noROMs);
     noROMs.setEnabled(!busy && !WorkState.update);
     renderStorage(busy);
+    systemLabel.setText(systemText());
     boolean ready = true;
     for (int n = 0; n < 4; n++) ready &= stepDone(n);
     action.setEnabled(!busy && ready);
@@ -581,6 +598,7 @@ public final class MainActivity extends Activity {
             + t("Action")
             + ": "
             + t(WorkState.update ? "Update an existing installation" : "Install a new card (erase)")
+            + (WorkState.system.isEmpty() ? "" : " · " + systemText())
             + "\n"
             + t("Storage")
             + ": "
@@ -731,12 +749,17 @@ public final class MainActivity extends Activity {
       if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0);
     }
     String lower = name.toLowerCase(Locale.ROOT);
+    if (request == 4 && !lower.endsWith(".img")) {
+      showError(t("Choose an .img system image."));
+      return;
+    }
     if (request == 1 && !(lower.endsWith(".img") || lower.endsWith(".zip"))) {
       showError(t("Choose an .img or .img.zip release image."));
       return;
     }
     final String extension =
-        request >= 2 ? ".dtb" : lower.endsWith(".zip") ? ".zip" : ".img";
+        request == 4 ? ".img" : request >= 2 ? ".dtb" : lower.endsWith(".zip") ? ".zip" : ".img";
+    final String shown = name;
     final Context app = getApplicationContext();
     WorkState.start(
         app,
@@ -753,12 +776,17 @@ public final class MainActivity extends Activity {
             int n;
             while ((n = in.read(buffer)) != -1) {
               total += n;
-              if (total > (request >= 2 ? 4L << 20 : 32L << 30))
+              if (total > (request == 4 ? 4L << 30 : request >= 2 ? 4L << 20 : 32L << 30))
                 throw new IOException("Selected file exceeds the size limit");
               out.write(buffer, 0, n);
             }
             out.getFD().sync();
-            if (request == 2) {
+            if (request == 4) {
+              WorkState.clearSystem();
+              WorkState.system = file.getAbsolutePath();
+              WorkState.systemName = shown;
+              WorkState.systemAccepted = true;
+            } else if (request == 2) {
               WorkState.custom = file.getAbsolutePath();
               WorkState.customAccepted = true;
               WorkState.convertDTB = false;
@@ -1162,6 +1190,11 @@ public final class MainActivity extends Activity {
     } catch (JSONException e) {
       return null;
     }
+  }
+
+  private String systemText() {
+    if (WorkState.system.isEmpty()) return t("The andr36oid system is written.");
+    return t("System image") + ": " + WorkState.systemName;
   }
 
   /** How a new card will be split between Android and games. */

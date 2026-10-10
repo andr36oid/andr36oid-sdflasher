@@ -32,6 +32,16 @@ final class WorkState {
   static volatile boolean customAccepted = false, update = false, noROMs = false, busy = false;
   // Android size for a new card in GiB, 0: the recommended size
   static volatile int userdataGiB = 0;
+  // a different system image (GSI) copied into app storage, "" for andr36oid's own
+  static volatile String system = "", systemName = "";
+  static volatile boolean systemAccepted = false;
+
+  static void clearSystem() {
+    if (!system.isEmpty()) new java.io.File(system).delete();
+    system = "";
+    systemName = "";
+    systemAccepted = false;
+  }
   // The console's own DTB: converted while writing (convert_dtb). conversion is
   // the preview the user still has to accept; conversionRefused its reason.
   static volatile boolean convertDTB = false;
@@ -136,6 +146,8 @@ final class WorkState {
         .put("userdata_gib", update || noROMs ? 0 : userdataGiB)
         .put("custom", custom)
         .put("custom_accepted", customAccepted)
-        .put("convert_dtb", convertDTB);
+        .put("convert_dtb", convertDTB)
+        .put("system", system)
+        .put("system_accepted", systemAccepted);
   }
 }

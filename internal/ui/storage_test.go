@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"fyne.io/fyne/v2/test"
@@ -42,5 +43,23 @@ func TestStorageSlider(t *testing.T) {
 	s.ready()
 	if s.sizeSlider.Visible() || s.storageText() != "" {
 		t.Fatal("slider shown for an update")
+	}
+}
+
+func TestSystemImageSummary(t *testing.T) {
+	a := test.NewApp()
+	defer a.Quit()
+	w := a.NewWindow("test")
+	defer w.Close()
+	s := &screen{win: w, locale: "en", im: &firmware.Image{Profiles: []firmware.Profile{{ID: "Panels/Panel4", Name: "R36S — Panel 4", Console: "R36S"}}}}
+	s.build()
+	s.summarize()
+	if strings.Contains(s.sumValues[4].Text, "System image") {
+		t.Fatal("system image shown without one")
+	}
+	s.system, s.systemAccepted = "/tmp/lineage-gsi.img", true
+	s.summarize()
+	if !strings.HasSuffix(s.sumValues[4].Text, "System image: lineage-gsi.img") {
+		t.Fatalf("summary %q", s.sumValues[4].Text)
 	}
 }

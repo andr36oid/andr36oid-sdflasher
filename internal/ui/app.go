@@ -39,7 +39,10 @@ type screen struct {
 	profile                             string
 	custom                              string
 	customAccepted                      bool
-	convert                             bool // custom is the console's own DTB, converted while writing
+	convert                             bool   // custom is the console's own DTB, converted while writing
+	system                              string // a different system image (GSI), "" for andr36oid's
+	systemAccepted                      bool
+	systemLabel                         *widget.Label
 	busy                                bool
 	releaseLabel, cardLabel, help       *widget.Label
 	console, profileSelect, driveSelect *widget.Select
@@ -609,7 +612,7 @@ func (s *screen) write(p *flash.Plan) {
 	back.Importance = widget.HighImportance
 	s.win.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(title, widget.NewLabel(s.drive.Label()), widget.NewSeparator()), back, nil, nil,
 		container.NewVScroll(container.NewVBox(phase, bar, outcome, m.img, legend(s.locale), details)))))
-	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, UserdataGiB: p.UserdataGiB, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert}
+	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, UserdataGiB: p.UserdataGiB, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert, SystemImage: s.system, SystemAccepted: s.systemAccepted}
 	var speed *flash.CardSpeed
 	go func() {
 		result, e := jobs.Run(req, func(p flash.Progress) {

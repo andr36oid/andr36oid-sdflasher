@@ -157,9 +157,15 @@ func (s *screen) summarize() {
 	set(3, s.dtbText())
 	if s.updating {
 		set(4, s.t("Update an existing installation"))
+		if s.system != "" {
+			set(4, s.sumValues[4].Text+" · "+s.systemText())
+		}
 		set(5, s.t("Kept as it is"))
 	} else {
 		set(4, s.t("Install a new card (erase)"))
+		if s.system != "" {
+			set(4, s.sumValues[4].Text+" · "+s.systemText())
+		}
 		set(5, s.storageText())
 	}
 	if s.updating {
@@ -226,6 +232,8 @@ func (s *screen) pagesFor(advanced fyne.CanvasObject) []*fyne.Container {
 			s.noROMs,
 			wrapped(s.t("Unchecked: choose below how much of the card Android gets. The rest becomes a games partition readable on your computer. Updates keep the existing arrangement.")),
 			s.storage,
+			widget.NewSeparator(),
+			s.systemSection(),
 		),
 		container.NewVBox(
 			heading(s.t("Check and write")),

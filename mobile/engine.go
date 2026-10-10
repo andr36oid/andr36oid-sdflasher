@@ -363,6 +363,7 @@ func (s *Session) Restore(d Disk, dir string, observer Observer) error {
 	return flash.RestoreBackup(context.Background(), dev, filepath.Join(dir, "recovery"), dev.size)
 }
 func CustomWarning() string { return firmware.CustomWarning }
+func GSIWarning() string    { return firmware.GSIWarning }
 
 // StorageLayout tells the app how a new card of size bytes is split when Android gets
 // wantGiB (0: the recommended size), as JSON in whole GiB: android, games (0 when all goes
