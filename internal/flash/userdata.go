@@ -50,3 +50,7 @@ func MaxUserdataGiB(size int64) int {
 	}
 	return 0
 }
+
+// RoundGiB rounds to whole GiB for display: partitions are aligned to 1 MiB, so a chosen
+// 32 GiB comes out a little under.
+func RoundGiB(n int64) int { return int((n + gib/2) / gib) }

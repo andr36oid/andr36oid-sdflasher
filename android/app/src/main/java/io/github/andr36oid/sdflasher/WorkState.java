@@ -30,6 +30,8 @@ final class WorkState {
       message = "",
       result = "";
   static volatile boolean customAccepted = false, update = false, noROMs = false, busy = false;
+  // Android size for a new card in GiB, 0: the recommended size
+  static volatile int userdataGiB = 0;
   // The console's own DTB: converted while writing (convert_dtb). conversion is
   // the preview the user still has to accept; conversionRefused its reason.
   static volatile boolean convertDTB = false;
@@ -131,6 +133,7 @@ final class WorkState {
         .put("mode", update ? "update" : "install")
         .put("profile", profile)
         .put("no_roms", noROMs)
+        .put("userdata_gib", update || noROMs ? 0 : userdataGiB)
         .put("custom", custom)
         .put("custom_accepted", customAccepted)
         .put("convert_dtb", convertDTB);

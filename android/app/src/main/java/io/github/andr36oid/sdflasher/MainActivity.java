@@ -25,6 +25,10 @@ public final class MainActivity extends Activity {
   private TextView stepLabel, modeHelp, summary, help;
   private Button back, next;
   private LinearLayout storage;
+  private TextView sizeText;
+  private SeekBar sizeBar;
+  private Button sizeAuto;
+  private int sizeMin = 4;
   private FrameLayout page;
   private Button updateNotice;
   private TextView imageLabel, cardLabel, status, customLabel, mapLegend;
@@ -387,13 +391,38 @@ public final class MainActivity extends Activity {
         });
     label(
         t(
-            "Unchecked: reserve 16 GiB for Android and use the remaining space for a games"
-                + " partition readable on your computer. Updates keep the existing arrangement."),
+            "Unchecked: choose below how much of the card Android gets. The rest becomes a"
+                + " games partition readable on your computer. Updates keep the existing"
+                + " arrangement."),
         false);
-    // More storage choices (such as a userdata size slider) go here.
     storage = new LinearLayout(this);
     storage.setOrientation(LinearLayout.VERTICAL);
     target.addView(storage);
+    sizeText = new TextView(this);
+    sizeText.setTextColor(getColor(R.color.body_text));
+    storage.addView(sizeText);
+    sizeBar = new SeekBar(this);
+    sizeBar.setOnSeekBarChangeListener(
+        new SeekBar.OnSeekBarChangeListener() {
+          public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+            if (!fromUser) return;
+            WorkState.userdataGiB = sizeMin + progress;
+            WorkState.revision++;
+          }
+
+          public void onStartTrackingTouch(SeekBar bar) {}
+
+          public void onStopTrackingTouch(SeekBar bar) {}
+        });
+    storage.addView(sizeBar);
+    sizeAuto = new Button(this);
+    sizeAuto.setText(t("Recommended size"));
+    sizeAuto.setOnClickListener(
+        v -> {
+          WorkState.userdataGiB = 0;
+          WorkState.revision++;
+        });
+    storage.addView(sizeAuto);
 
     section(4);
     label(t("Check and write"), true);
@@ -512,6 +541,7 @@ public final class MainActivity extends Activity {
     update.setEnabled(!busy && installed);
     noROMs.setChecked(WorkState.noROMs);
     noROMs.setEnabled(!busy && !WorkState.update);
+    renderStorage(busy);
     boolean ready = true;
     for (int n = 0; n < 4; n++) ready &= stepDone(n);
     action.setEnabled(!busy && ready);
@@ -554,11 +584,7 @@ public final class MainActivity extends Activity {
             + "\n"
             + t("Storage")
             + ": "
-            + (WorkState.update
-                ? t("Kept as it is")
-                : WorkState.noROMs
-                    ? t("Use all available storage for Android")
-                    : t("Android 16 GiB, the rest for games")));
+            + storageText());
     help.setText(
         WorkState.update
             ? t(
@@ -1127,6 +1153,47 @@ public final class MainActivity extends Activity {
             })
         .setNegativeButton(t("Close"), null)
         .show();
+  }
+
+  private JSONObject storageLayout() {
+    if (WorkState.selected == null) return null;
+    try {
+      return new JSONObject(Mobile.storageLayout(WorkState.selected.bytes, WorkState.userdataGiB));
+    } catch (JSONException e) {
+      return null;
+    }
+  }
+
+  /** How a new card will be split between Android and games. */
+  private String storageText() {
+    if (WorkState.update) return t("Kept as it is");
+    JSONObject l = storageLayout();
+    if (WorkState.noROMs || (l != null && l.optInt("games") == 0))
+      return t("Use all available storage for Android");
+    if (l == null) return "";
+    return t("Android %d GiB, games %d GiB", l.optInt("android"), l.optInt("games"));
+  }
+
+  /** The size slider: only for a new card that keeps a games partition. */
+  private void renderStorage(boolean busy) {
+    JSONObject l = storageLayout();
+    int max = l == null ? 0 : l.optInt("max");
+    if (l != null) sizeMin = l.optInt("min");
+    if (WorkState.userdataGiB > max) {
+      WorkState.userdataGiB = 0;
+      l = storageLayout();
+    }
+    sizeText.setText(WorkState.update ? "" : storageText());
+    sizeText.setVisibility(sizeText.getText().length() > 0 ? View.VISIBLE : View.GONE);
+    boolean show = l != null && !WorkState.update && !WorkState.noROMs && max > sizeMin;
+    sizeBar.setVisibility(show ? View.VISIBLE : View.GONE);
+    sizeAuto.setVisibility(show ? View.VISIBLE : View.GONE);
+    if (!show) return;
+    int value = WorkState.userdataGiB == 0 ? l.optInt("android") : WorkState.userdataGiB;
+    sizeBar.setMax(max - sizeMin);
+    sizeBar.setProgress(Math.max(0, value - sizeMin));
+    sizeBar.setEnabled(!busy);
+    sizeAuto.setEnabled(!busy && WorkState.userdataGiB != 0);
   }
 
   /** The card speed measured while writing, with a warning for slow cards. */

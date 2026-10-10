@@ -52,6 +52,11 @@ type screen struct {
 	stepButtons                         [stepCount]*widget.Button
 	back, next                          *widget.Button
 	storage                             *fyne.Container
+	sizeLabel                           *widget.Label
+	sizeSlider                          *widget.Slider
+	sizeAuto                            *widget.Button
+	sizeSetting                         bool // refreshStorage is moving the slider
+	userdataGiB                         int  // Android size for a new card, 0: recommended
 	sumValues                           [6]*widget.Label
 	modeHelp                            *widget.Label
 	progress                            *widget.ProgressBar
@@ -145,7 +150,7 @@ func (s *screen) build() {
 	s.driveSelect = widget.NewSelect(nil, nil)
 	s.driveSelect.PlaceHolder = s.t("Select a microSD card")
 	s.noROMs = widget.NewCheck(s.t("Use all available storage for Android"), func(bool) { s.ready() })
-	s.storage = container.NewVBox()
+	s.buildStorage()
 	s.mode = widget.NewRadioGroup([]string{s.t("Install a new card (erase)"), s.t("Update an existing installation")}, func(v string) {
 		s.updating = v == s.t("Update an existing installation")
 		if s.updating {
@@ -234,6 +239,7 @@ func (s *screen) ready() {
 	} else {
 		s.action.Disable()
 	}
+	s.refreshStorage()
 	s.refreshSteps()
 	if s.step == stepWrite {
 		s.summarize()
@@ -557,7 +563,7 @@ func (s *screen) confirm() {
 	if s.updating {
 		mode = "update"
 	}
-	p, e := flash.Build(s.im, *s.card, s.drive.Size, mode, s.profile, s.noROMs.Checked, 0)
+	p, e := flash.Build(s.im, *s.card, s.drive.Size, mode, s.profile, s.noROMs.Checked, s.userdataGiB)
 	if e != nil {
 		s.showError(e)
 		return
@@ -603,7 +609,7 @@ func (s *screen) write(p *flash.Plan) {
 	back.Importance = widget.HighImportance
 	s.win.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(title, widget.NewLabel(s.drive.Label()), widget.NewSeparator()), back, nil, nil,
 		container.NewVScroll(container.NewVBox(phase, bar, outcome, m.img, legend(s.locale), details)))))
-	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert}
+	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, UserdataGiB: p.UserdataGiB, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert}
 	var speed *flash.CardSpeed
 	go func() {
 		result, e := jobs.Run(req, func(p flash.Progress) {

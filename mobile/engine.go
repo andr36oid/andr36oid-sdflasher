@@ -156,6 +156,8 @@ type options struct {
 	Custom         string `json:"custom"`
 	CustomAccepted bool   `json:"custom_accepted"`
 	ConvertDTB     bool   `json:"convert_dtb"`
+	System         string `json:"system"`
+	SystemAccepted bool   `json:"system_accepted"`
 }
 
 func (s *Session) plan(d *usbDisk, input string) (*flash.Plan, options, error) {
@@ -187,6 +189,9 @@ func (s *Session) plan(d *usbDisk, input string) (*flash.Plan, options, error) {
 		if conv.Profile != "" {
 			opts.Profile = conv.Profile
 		}
+	}
+	if opts.System != "" && !opts.SystemAccepted {
+		return nil, opts, errors.New(firmware.GSIWarning)
 	}
 	p, e := flash.Build(s.image, card, d.size, opts.Mode, opts.Profile, opts.NoROMs, opts.UserdataGiB)
 	return p, opts, e
@@ -273,6 +278,16 @@ func (s *Session) Write(d Disk, input string, observer Observer) (string, error)
 	if e != nil {
 		return "", e
 	}
+	if opts.System != "" {
+		sys, e := firmware.PrepareSystem(context.Background(), s.image, opts.System, dir)
+		if e != nil {
+			return "", e
+		}
+		defer os.Remove(sys)
+		if e = p.UseSystemImage(sys); e != nil {
+			return "", e
+		}
+	}
 	boot, e := firmware.PrepareBoot(s.image, opts.Profile, p.NoROMs, opts.Mode == "update", opts.Custom, dir, firmware.BootOptions{ConvertDTB: opts.ConvertDTB, UserdataGiB: p.UserdataGiB})
 	if e != nil {
 		return "", e
@@ -348,6 +363,15 @@ func (s *Session) Restore(d Disk, dir string, observer Observer) error {
 	return flash.RestoreBackup(context.Background(), dev, filepath.Join(dir, "recovery"), dev.size)
 }
 func CustomWarning() string { return firmware.CustomWarning }
+
+// StorageLayout tells the app how a new card of size bytes is split when Android gets
+// wantGiB (0: the recommended size), as JSON in whole GiB: android, games (0 when all goes
+// to Android), max (the largest choice that leaves a games partition, 0 for none).
+func StorageLayout(size int64, wantGiB int) string {
+	android, games := flash.UserdataLayout(size, wantGiB, false)
+	b, _ := json.Marshal(map[string]int{"android": flash.RoundGiB(android), "games": flash.RoundGiB(games), "max": flash.MaxUserdataGiB(size), "min": flash.MinUserdataGiB})
+	return string(b)
+}
 
 type conversion struct {
 	Family   string   `json:"family"`

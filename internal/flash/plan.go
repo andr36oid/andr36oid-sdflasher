@@ -9,6 +9,7 @@ import (
 	"github.com/andr36oid/andr36oid-sdflasher/internal/firmware"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/layout"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -24,6 +25,7 @@ type Write struct {
 	Range
 	SourceOffset int64  `json:"source_offset"`
 	Boot         bool   `json:"boot"`
+	System       bool   `json:"system,omitempty"`
 	Data         []byte `json:"data,omitempty"`
 }
 type Plan struct {
@@ -37,6 +39,8 @@ type Plan struct {
 	NoROMs         bool         `json:"no_roms"`
 	// UserdataGiB is the Android size the resizer should use; 0 is automatic.
 	UserdataGiB int `json:"userdata_gib,omitempty"`
+	// SystemImage is a prepared file written to system instead of the release's own.
+	SystemImage string `json:"system_image,omitempty"`
 }
 type Card struct {
 	Table       layout.Table `json:"table"`
@@ -241,6 +245,50 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 		return nil, e
 	}
 	return p, nil
+}
+
+// UseSystemImage writes a file from firmware.PrepareSystem to the system partition instead
+// of the release's system. Everything else in the plan stays as it is.
+func (p *Plan) UseSystemImage(path string) error {
+	part, ok := p.Table.Find("system")
+	if !ok {
+		return errors.New("no system partition")
+	}
+	st, e := os.Stat(path)
+	if e != nil {
+		return e
+	}
+	if st.Size() != part.Size() {
+		return errors.New("the prepared system image does not match the system partition")
+	}
+	sys := Write{Range: Range{"System image", part.Offset(), part.Size()}, System: true}
+	var out []Write
+	for _, w := range p.Writes {
+		switch {
+		case w.Data != nil || w.Boot || w.End() <= sys.Offset || w.Offset >= sys.End():
+			out = append(out, w)
+		case w.Offset == sys.Offset && w.Length == sys.Length:
+			out = append(out, sys)
+		case w.Offset < sys.Offset && w.End() > sys.End():
+			// The whole release image: write it around the system partition.
+			before, after := w, w
+			before.Length = sys.Offset - w.Offset
+			after.Offset, after.Length = sys.End(), w.End()-sys.End()
+			after.SourceOffset = w.SourceOffset + (sys.End() - w.Offset)
+			out = append(out, before, sys, after)
+		default:
+			return fmt.Errorf("%s partly overlaps the system partition", w.Name)
+		}
+	}
+	found := false
+	for _, w := range out {
+		found = found || w.System
+	}
+	if !found {
+		return errors.New("this plan does not write the system partition")
+	}
+	p.Writes, p.SystemImage = out, path
+	return p.Validate()
 }
 func (p *Plan) Validate() error {
 	if p.Size < 68*512 {

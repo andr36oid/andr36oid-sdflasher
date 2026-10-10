@@ -160,10 +160,7 @@ func (s *screen) summarize() {
 		set(5, s.t("Kept as it is"))
 	} else {
 		set(4, s.t("Install a new card (erase)"))
-		set(5, s.t("Android 16 GiB, the rest for games"))
-		if s.noROMs.Checked {
-			set(5, s.t("Use all available storage for Android"))
-		}
+		set(5, s.storageText())
 	}
 	if s.updating {
 		s.action.SetText(s.t("Update this card…"))
@@ -227,8 +224,7 @@ func (s *screen) pagesFor(advanced fyne.CanvasObject) []*fyne.Container {
 			widget.NewSeparator(),
 			heading(s.t("Storage")),
 			s.noROMs,
-			wrapped(s.t("Unchecked: reserve 16 GiB for Android and use the remaining space for a games partition readable on your computer. Updates keep the existing arrangement.")),
-			// More storage choices (such as a userdata size slider) go here.
+			wrapped(s.t("Unchecked: choose below how much of the card Android gets. The rest becomes a games partition readable on your computer. Updates keep the existing arrangement.")),
 			s.storage,
 		),
 		container.NewVBox(
