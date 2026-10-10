@@ -125,7 +125,7 @@ func TestPrepareBootConvertsConsoleDTB(t *testing.T) {
 	if !bytes.Equal(read("/rk3326-r36s-android.dtb"), conv.Kernel) {
 		t.Errorf("kernel DTB is not the converted one")
 	}
-	for _, n := range uBootNames {
+	for _, n := range UBootDTBNames {
 		if !bytes.Equal(read("/"+n), conv.UBoot) {
 			t.Errorf("%s is not the converted boot logo DTB", n)
 		}

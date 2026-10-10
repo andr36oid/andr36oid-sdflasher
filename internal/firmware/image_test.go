@@ -3,6 +3,8 @@ package firmware
 import (
 	"archive/zip"
 	"context"
+	"github.com/diskfs/go-diskfs/backend/file"
+	"github.com/diskfs/go-diskfs/filesystem/fat32"
 	"os"
 	"path/filepath"
 	"testing"
@@ -72,5 +74,44 @@ func TestArchiveRejectsAmbiguousAndDamagedImages(t *testing.T) {
 	os.WriteFile(p, b, 0600)
 	if _, e := Stage(context.Background(), p, dir, nil); e == nil {
 		t.Fatal("accepted corrupt ZIP")
+	}
+}
+func TestUserdataSizeFile(t *testing.T) {
+	p := os.Getenv("SDFLASHER_TEST_IMAGE")
+	if p == "" {
+		t.Skip("set SDFLASHER_TEST_IMAGE for release-image integration")
+	}
+	im, e := Inspect(context.Background(), p, nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	read := func(gib int, noROMs, update bool) (string, bool) {
+		boot, e := PrepareBoot(im, "Panels/Panel4", noROMs, update, "", t.TempDir(), BootOptions{UserdataGiB: gib})
+		if e != nil {
+			t.Fatal(e)
+		}
+		f, e := os.Open(boot)
+		if e != nil {
+			t.Fatal(e)
+		}
+		defer f.Close()
+		st, _ := f.Stat()
+		fs, e := fat32.Read(file.New(f, true), st.Size(), 0, 512)
+		if e != nil {
+			t.Fatal(e)
+		}
+		b, e := ReadFile(fs, "/userdata-size.txt", 64)
+		return string(b), e == nil
+	}
+	if s, ok := read(32, false, false); !ok || s != "32\n" {
+		t.Errorf("install with 32 GiB wrote %q %v", s, ok)
+	}
+	for _, c := range []struct {
+		gib            int
+		noROMs, update bool
+	}{{0, false, false}, {32, true, false}} {
+		if s, ok := read(c.gib, c.noROMs, c.update); ok {
+			t.Errorf("%+v wrote %q", c, s)
+		}
 	}
 }

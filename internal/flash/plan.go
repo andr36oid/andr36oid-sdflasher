@@ -35,6 +35,8 @@ type Plan struct {
 	OldFingerprint string       `json:"old_fingerprint"`
 	Profile        string       `json:"profile"`
 	NoROMs         bool         `json:"no_roms"`
+	// UserdataGiB is the Android size the resizer should use; 0 is automatic.
+	UserdataGiB int `json:"userdata_gib,omitempty"`
 }
 type Card struct {
 	Table       layout.Table `json:"table"`
@@ -153,7 +155,7 @@ func InspectCard(f io.ReaderAt, size int64) (Card, error) {
 	_, c.Treble = t.Find("vendor")
 	return c, nil
 }
-func Build(im *firmware.Image, card Card, size int64, mode, profile string, noROMs bool) (*Plan, error) {
+func Build(im *firmware.Image, card Card, size int64, mode, profile string, noROMs bool, userdataGiB int) (*Plan, error) {
 	if mode != "install" && mode != "update" {
 		return nil, errors.New("invalid operation")
 	}
@@ -169,14 +171,20 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 	if !found {
 		return nil, errors.New("choose a device profile shipped with this image")
 	}
-	p := &Plan{Mode: mode, Size: size, Profile: profile, NoROMs: noROMs, OldFingerprint: card.Fingerprint}
+	if userdataGiB < 0 || userdataGiB > 1<<20 {
+		return nil, errors.New("invalid Android storage size")
+	}
+	if noROMs || mode != "install" {
+		userdataGiB = 0
+	}
+	p := &Plan{Mode: mode, Size: size, Profile: profile, NoROMs: noROMs, UserdataGiB: userdataGiB, OldFingerprint: card.Fingerprint}
 	p.Table = im.Table
 	p.Table.Parts = append([]layout.Partition{}, im.Table.Parts...)
 	p.Table.Size = size
 	p.Table.ID = layout.GUID()
 	if mode == "install" {
-		if !noROMs && size < 20<<30 {
-			return nil, errors.New("the separate games layout needs a card of at least 20 GiB; choose all storage for Android")
+		if _, roms := UserdataLayout(size, userdataGiB, noROMs); !noROMs && roms == 0 {
+			return nil, errors.New("this card has no room for a separate games partition with that much Android storage; choose less, or all storage for Android")
 		}
 		p.Writes = append(p.Writes, Write{Range: Range{"Release image", 34 * 512, im.Size - 67*512}, SourceOffset: 34 * 512})
 	} else {

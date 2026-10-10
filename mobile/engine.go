@@ -150,6 +150,7 @@ type options struct {
 	Mode           string `json:"mode"`
 	Profile        string `json:"profile"`
 	NoROMs         bool   `json:"no_roms"`
+	UserdataGiB    int    `json:"userdata_gib"`
 	Fingerprint    string `json:"fingerprint"`
 	Identity       string `json:"identity"`
 	Custom         string `json:"custom"`
@@ -187,7 +188,7 @@ func (s *Session) plan(d *usbDisk, input string) (*flash.Plan, options, error) {
 			opts.Profile = conv.Profile
 		}
 	}
-	p, e := flash.Build(s.image, card, d.size, opts.Mode, opts.Profile, opts.NoROMs)
+	p, e := flash.Build(s.image, card, d.size, opts.Mode, opts.Profile, opts.NoROMs, opts.UserdataGiB)
 	return p, opts, e
 }
 func (s *Session) Plan(d Disk, input string) (string, error) {
@@ -272,7 +273,7 @@ func (s *Session) Write(d Disk, input string, observer Observer) (string, error)
 	if e != nil {
 		return "", e
 	}
-	boot, e := firmware.PrepareBoot(s.image, opts.Profile, p.NoROMs, opts.Mode == "update", opts.Custom, dir, firmware.BootOptions{ConvertDTB: opts.ConvertDTB})
+	boot, e := firmware.PrepareBoot(s.image, opts.Profile, p.NoROMs, opts.Mode == "update", opts.Custom, dir, firmware.BootOptions{ConvertDTB: opts.ConvertDTB, UserdataGiB: p.UserdataGiB})
 	if e != nil {
 		return "", e
 	}

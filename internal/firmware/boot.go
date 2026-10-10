@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -25,6 +26,10 @@ var UBootDTBNames = []string{
 const CustomWarning = "Custom DTBs must be built specifically for andr36oid. DTBs from other custom firmwares are unlikely to work."
 
 func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir string, opts ...BootOptions) (string, error) {
+	var userdataGiB int
+	if len(opts) > 0 {
+		userdataGiB = opts[0].UserdataGiB
+	}
 	src, e := os.Open(im.Path)
 	if e != nil {
 		return "", e
@@ -155,6 +160,17 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 	} else {
 		if _, e = ReadFile(fs, "/.noroms", 64); e == nil {
 			if e = fs.Remove(".noroms"); e != nil {
+				return "", e
+			}
+		}
+	}
+	if !updating {
+		if userdataGiB > 0 && !noROMs {
+			if e = write("userdata-size.txt", []byte(strconv.Itoa(userdataGiB)+"\n")); e != nil {
+				return "", e
+			}
+		} else if _, e = ReadFile(fs, "/userdata-size.txt", 64); e == nil {
+			if e = fs.Remove("userdata-size.txt"); e != nil {
 				return "", e
 			}
 		}

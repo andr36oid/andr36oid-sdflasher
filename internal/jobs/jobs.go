@@ -25,6 +25,7 @@ type Request struct {
 	Mode            string         `json:"mode,omitempty"`
 	Profile         string         `json:"profile,omitempty"`
 	NoROMs          bool           `json:"no_roms,omitempty"`
+	UserdataGiB     int            `json:"userdata_gib,omitempty"`
 	CustomDTB       string         `json:"custom_dtb,omitempty"`
 	CustomAccepted  bool           `json:"custom_accepted,omitempty"`
 	ConvertDTB      bool           `json:"convert_dtb,omitempty"`
@@ -148,11 +149,11 @@ func Worker(job string) error {
 				req.Profile = conv.Profile
 			}
 		}
-		p, e := flash.Build(im, card, d.Size, req.Mode, req.Profile, req.NoROMs)
+		p, e := flash.Build(im, card, d.Size, req.Mode, req.Profile, req.NoROMs, req.UserdataGiB)
 		if e != nil {
 			return e
 		}
-		boot, e := firmware.PrepareBoot(im, req.Profile, p.NoROMs, req.Mode == "update", req.CustomDTB, dir, firmware.BootOptions{ConvertDTB: req.ConvertDTB})
+		boot, e := firmware.PrepareBoot(im, req.Profile, p.NoROMs, req.Mode == "update", req.CustomDTB, dir, firmware.BootOptions{ConvertDTB: req.ConvertDTB, UserdataGiB: p.UserdataGiB})
 		if e != nil {
 			return e
 		}
