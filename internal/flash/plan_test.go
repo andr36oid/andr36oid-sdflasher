@@ -179,10 +179,11 @@ func TestInstallSizesFollowTheResizer(t *testing.T) {
 		want   int
 		ok     bool
 	}{
-		{16 * g, false, 0, true},  // was refused under 20 GiB
-		{8 * g, false, 0, false},  // no room for games
-		{8 * g, true, 0, true},    // all for Android
-		{64 * g, false, 32, true}, // chosen size
+		{16 * g, false, 0, true},   // automatic: the whole card goes to Android
+		{8 * g, false, 0, true},    // the same
+		{16 * g, false, 16, false}, // a chosen size that leaves no games partition
+		{8 * g, true, 0, true},     // all for Android
+		{64 * g, false, 32, true},  // chosen size
 		{64 * g, false, 100, false},
 		{64 * g, true, 32, true}, // size ignored with all for Android
 	}

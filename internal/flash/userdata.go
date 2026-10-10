@@ -7,14 +7,15 @@ package flash
 const (
 	gib            = int64(1) << 30
 	userdataStart  = int64(5701009) * 512
-	MinUserdataGiB = 4
+	MinUserdataGiB = 16
 	minROMs        = 1 * gib
 )
 
 // UserdataLayout returns the sizes in bytes the resizer will give userdata
 // and EASYROMS on a card of size bytes. wantGiB 0 means automatic (half of the
-// free space, 8 to 64 GiB). EASYROMS is 0 when it is not made: noROMs, or less
-// than 1 GiB would be left.
+// free space, at most 64 GiB). Android gets at least 16 GiB either way. EASYROMS is 0
+// when it is not made: noROMs, or less than 1 GiB would be left (every card of 16 GB
+// or less).
 func UserdataLayout(size int64, wantGiB int, noROMs bool) (userdata, roms int64) {
 	last := size/512 - 34
 	free := (last - userdataStart/512 + 1) * 512
@@ -27,11 +28,9 @@ func UserdataLayout(size int64, wantGiB int, noROMs bool) (userdata, roms int64)
 	want := int64(wantGiB) * gib
 	if wantGiB <= 0 {
 		want = free / 2 / 512 * 512
-		want = max(want, 8*gib)
 		want = min(want, 64*gib)
-	} else {
-		want = max(want, MinUserdataGiB*gib)
 	}
+	want = max(want, MinUserdataGiB*gib)
 	end := (userdataStart/512+want/512)/2048*2048 - 1
 	if last-end < minROMs/512 {
 		return free, 0

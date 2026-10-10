@@ -19,8 +19,10 @@ func TestUserdataLayout(t *testing.T) {
 		noROMs bool
 		exp    int64
 	}{
-		{20113457152, 0, false, half(20113457152)},
-		{16 * gb, 0, false, whole(8)},
+		{20113457152, 0, false, all},
+		{24 * gb, 0, false, whole(16)},
+		{32 * gb, 0, false, whole(16)},
+		{16 * gb, 0, false, all},
 		{8 * gb, 0, false, all},
 		{64 * gb, 0, false, half(64 * gb)},
 		{512 * gb, 0, false, whole(64)},
@@ -28,7 +30,9 @@ func TestUserdataLayout(t *testing.T) {
 		{64 * gb, 16, false, whole(16)},
 		{64 * gb, 56, false, all},
 		{32 * gb, 100, false, all},
-		{64 * gb, 1, false, whole(4)},
+		{64 * gb, 1, false, whole(16)},
+		{64 * gb, 8, false, whole(16)},
+		{16 * gb, 8, false, all},
 	}
 	for _, c := range cases {
 		u, r := UserdataLayout(c.size, c.want, c.noROMs)
@@ -49,7 +53,8 @@ func TestMaxUserdataGiB(t *testing.T) {
 	for _, size := range []int64{8 * gb, 16 * gb, 32 * gb, 128 * gb} {
 		m := MaxUserdataGiB(size)
 		if m == 0 {
-			if size > 10*gb {
+			// 16 GiB for Android and 1 GiB for games need more than 16 GB
+			if size > 20*gb {
 				t.Errorf("%d: no games partition possible", size)
 			}
 			continue

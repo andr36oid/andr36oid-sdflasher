@@ -187,7 +187,9 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 	p.Table.Size = size
 	p.Table.ID = layout.GUID()
 	if mode == "install" {
-		if _, roms := UserdataLayout(size, userdataGiB, noROMs); !noROMs && roms == 0 {
+		// Automatic on a small card is fine: the resizer gives Android the whole card.
+		// A size the user chose must leave the games partition they expect.
+		if _, roms := UserdataLayout(size, userdataGiB, noROMs); !noROMs && userdataGiB > 0 && roms == 0 {
 			return nil, errors.New("this card has no room for a separate games partition with that much Android storage; choose less, or all storage for Android")
 		}
 		p.Writes = append(p.Writes, Write{Range: Range{"Release image", 34 * 512, im.Size - 67*512}, SourceOffset: 34 * 512})
