@@ -17,9 +17,12 @@
   "Card": "कार्ड",
   "Card inspection failed.": "कार्ड की जाँच नहीं हो पाई।",
   "Card operations": "कार्ड के काम",
+  "Card speed": "कार्ड की स्पीड",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "कार्ड की स्पीड: लिखने में %.0f MB/s, हर छोटे रीड में %.1f ms, हर छोटे राइट में %.1f ms",
   "Check and write": "जाँचें और लिखें",
   "Check the selected image and card, then try again.": "चुनी गई इमेज और कार्ड की जाँच करें, फिर दोबारा कोशिश करें।",
   "Checking GitHub releases…": "GitHub रिलीज़ की जाँच हो रही है…",
+  "Checking card speed": "कार्ड की स्पीड जाँची जा रही है",
   "Checking source image": "स्रोत इमेज जाँची जा रही है",
   "Checking the release image…": "रिलीज़ इमेज की जाँच हो रही है…",
   "Choose a card": "कार्ड चुनें",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "पिछला इंस्टॉलेशन रिस्टोर और सत्यापित कर दिया गया है।",
   "This DTB can’t be converted": "यह DTB कन्वर्ट नहीं की जा सकती",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "यह DTB एक प्रोग्राम ने आपके कंसोल की अपनी DTB से बनाई है। इसे आपके कंसोल पर टेस्ट नहीं किया गया है। अगर स्क्रीन काली रहे या बटन काम न करें, तो कार्ड को इसके बिना फिर से लिखें।",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "यह कार्ड धीमा है। Android कार्ड से चलता है, इसलिए ऐप देर से खुल सकते हैं और गेम अटक सकते हैं। आसान अनुभव के लिए किसी जाने-माने ब्रांड का A1 या A2 मार्क वाला कार्ड इस्तेमाल करें।",
   "Treble installation": "Treble इंस्टॉलेशन",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "USB एक्सेस के लिए libaums और libusb उपयोग होते हैं, यही USB स्टैक EtchDroid में है।",
   "USB permission was denied.": "USB की अनुमति नहीं मिली।",
@@ -180,6 +184,7 @@
   "microSD card": "microSD कार्ड",
   "preflight": "लिखने से पहले जाँच",
   "restoring": "रिस्टोर हो रहा है",
+  "speed": "स्पीड",
   "verifying": "सत्यापन हो रहा है",
   "writing": "लिखा जा रहा है"
 }

@@ -17,9 +17,12 @@
   "Card": "Tarjeta",
   "Card inspection failed.": "Falló la inspección de la tarjeta.",
   "Card operations": "Operaciones de tarjeta",
+  "Card speed": "Velocidad de la tarjeta",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "Velocidad de la tarjeta: %.0f MB/s al escribir, %.1f ms por lectura pequeña, %.1f ms por escritura pequeña",
   "Check and write": "Comprobar y escribir",
   "Check the selected image and card, then try again.": "Comprueba la imagen y la tarjeta seleccionadas e inténtalo de nuevo.",
   "Checking GitHub releases…": "Consultando versiones de GitHub…",
+  "Checking card speed": "Comprobando la velocidad de la tarjeta",
   "Checking source image": "Comprobando la imagen de origen",
   "Checking the release image…": "Comprobando la imagen…",
   "Choose a card": "Elegir una tarjeta",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "La instalación anterior se ha restaurado y verificado.",
   "This DTB can’t be converted": "Este DTB no se puede convertir",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "Este DTB lo ha creado un programa a partir del DTB propio de tu consola. No se ha probado en tu consola. Si la pantalla se queda a oscuras o los botones no funcionan, vuelve a escribir la tarjeta sin él.",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "Esta tarjeta es lenta. Android se ejecuta desde la tarjeta, así que las apps pueden tardar en abrirse y los juegos pueden ir a tirones. Para una experiencia fluida, usa una tarjeta de una marca conocida con la marca A1 o A2.",
   "Treble installation": "Instalación Treble",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "El acceso USB usa libaums y libusb, la misma pila USB que EtchDroid.",
   "USB permission was denied.": "Se denegó el permiso USB.",
@@ -180,6 +184,7 @@
   "microSD card": "Tarjeta microSD",
   "preflight": "Comprobación previa",
   "restoring": "Restaurando",
+  "speed": "velocidad",
   "verifying": "Verificando",
   "writing": "Escribiendo"
 }

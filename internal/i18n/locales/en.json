@@ -17,9 +17,12 @@
   "Card": "Card",
   "Card inspection failed.": "Card inspection failed.",
   "Card operations": "Card operations",
+  "Card speed": "Card speed",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write",
   "Check and write": "Check and write",
   "Check the selected image and card, then try again.": "Check the selected image and card, then try again.",
   "Checking GitHub releases…": "Checking GitHub releases…",
+  "Checking card speed": "Checking card speed",
   "Checking source image": "Checking source image",
   "Checking the release image…": "Checking the release image…",
   "Choose a card": "Choose a card",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "The previous installation was restored and verified.",
   "This DTB can’t be converted": "This DTB can’t be converted",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.",
   "Treble installation": "Treble installation",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "USB access uses libaums and libusb, the same USB stack used by EtchDroid.",
   "USB permission was denied.": "USB permission was denied.",
@@ -180,6 +184,7 @@
   "microSD card": "microSD card",
   "preflight": "preflight",
   "restoring": "restoring",
+  "speed": "speed",
   "verifying": "verifying",
   "writing": "Writing"
 }

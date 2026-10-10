@@ -604,9 +604,14 @@ func (s *screen) write(p *flash.Plan) {
 	s.win.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(title, widget.NewLabel(s.drive.Label()), widget.NewSeparator()), back, nil, nil,
 		container.NewVScroll(container.NewVBox(phase, bar, outcome, m.img, legend(s.locale), details)))))
 	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert}
+	var speed *flash.CardSpeed
 	go func() {
 		result, e := jobs.Run(req, func(p flash.Progress) {
 			fyne.Do(func() {
+				if p.Speed != nil {
+					speed = p.Speed
+					return
+				}
 				m.update(p)
 				phase.SetText(s.t(p.Phase) + ": " + s.t(p.Name))
 				if p.Total > 0 {
@@ -631,6 +636,14 @@ func (s *screen) write(p *flash.Plan) {
 			bar.SetValue(1)
 			title.SetText(s.t("Written and verified"))
 			phase.SetText(s.t("Your card has been written and verified."))
+			if speed != nil && speed.WriteMBps > 0 {
+				outcome.SetText(s.t("Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write", speed.WriteMBps, speed.ReadLatency, speed.WriteLatency))
+				if speed.Slow {
+					outcome.SetText(s.t("This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.") + "\n" + outcome.Text)
+					outcome.Importance = widget.WarningImportance
+				}
+				outcome.Show()
+			}
 			if p.Mode == "install" {
 				details.SetText(s.t("Safely eject the card and insert it into the console’s system card slot. The first boot prepares storage and restarts the console. Keep it powered on until Android setup appears. If the screen stays blank, check the chosen board and panel profile."))
 			} else {

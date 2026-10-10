@@ -17,9 +17,12 @@
   "Card": "Cartão",
   "Card inspection failed.": "Falhou a inspeção do cartão.",
   "Card operations": "Operações do cartão",
+  "Card speed": "Velocidade do cartão",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "Velocidade do cartão: %.0f MB/s na gravação, %.1f ms por leitura pequena, %.1f ms por gravação pequena",
   "Check and write": "Verificar e gravar",
   "Check the selected image and card, then try again.": "Verifica a imagem e o cartão selecionados e tenta novamente.",
   "Checking GitHub releases…": "A consultar versões do GitHub…",
+  "Checking card speed": "A verificar a velocidade do cartão",
   "Checking source image": "A verificar a imagem de origem",
   "Checking the release image…": "A verificar a imagem…",
   "Choose a card": "Escolher um cartão",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "A instalação anterior foi restaurada e verificada.",
   "This DTB can’t be converted": "Este DTB não pode ser convertido",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "Este DTB foi criado por um programa a partir do DTB próprio da tua consola. Não foi testado na tua consola. Se o ecrã ficar escuro ou os botões não funcionarem, grava o cartão outra vez sem ele.",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "Este cartão é lento. O Android corre a partir do cartão, por isso as apps podem demorar a abrir e os jogos podem engasgar. Para uma experiência fluida, usa um cartão de uma marca conhecida com a marcação A1 ou A2.",
   "Treble installation": "Instalação Treble",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "O acesso USB usa libaums e libusb, a mesma pilha USB do EtchDroid.",
   "USB permission was denied.": "A permissão USB foi recusada.",
@@ -180,6 +184,7 @@
   "microSD card": "Cartão microSD",
   "preflight": "Verificação prévia",
   "restoring": "A restaurar",
+  "speed": "velocidade",
   "verifying": "A verificar",
   "writing": "A gravar"
 }

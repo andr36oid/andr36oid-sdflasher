@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type Progress struct {
@@ -22,6 +23,8 @@ type Progress struct {
 	Offset int64  `json:"offset"`
 	Length int64  `json:"length"`
 	Plan   *Plan  `json:"plan,omitempty"`
+	// Speed comes with the "speed" phase just before "complete".
+	Speed *CardSpeed `json:"speed,omitempty"`
 }
 type Device interface {
 	io.ReaderAt
@@ -185,8 +188,16 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 		}
 		return fmt.Errorf("%v; installation is incomplete, run Install again before using the card", cause)
 	}
+	notify(Progress{Phase: "preflight", Name: "Checking card speed"})
+	speed, e := measureLatency(ctx, dst, p)
+	if e != nil {
+		return fail(e)
+	}
+	var bulkBytes int64
+	var bulkTime time.Duration
 	for _, w := range p.Writes {
 		r, off := sourceFor(w)
+		started := time.Now()
 		if e = copyRange(ctx, dst, r, w.Offset, off, w.Length, func(n int64) {
 			notify(Progress{Phase: "writing", Name: w.Name, Done: done + n, Total: total, Offset: w.Offset, Length: n})
 		}); e != nil {
@@ -194,6 +205,10 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 		}
 		if e = dst.Sync(); e != nil {
 			return fail(e)
+		}
+		if w.Length >= 64<<20 {
+			bulkBytes += w.Length
+			bulkTime += time.Since(started)
 		}
 		if e = verify(ctx, dst, r, w.Offset, off, w.Length, func(n int64) {
 			notify(Progress{Phase: "verifying", Name: w.Name, Done: done + n, Total: total, Offset: w.Offset, Length: n})
@@ -221,6 +236,11 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 	if sum, e := firmware.Hash(ctx, src, im.Size, nil); e != nil || sum != im.SHA256 {
 		return fail(errors.New("source image changed during the operation"))
 	}
+	if bulkTime > 0 {
+		speed.WriteMBps = float64(bulkBytes) / (1 << 20) / bulkTime.Seconds()
+	}
+	speed.judge()
+	notify(Progress{Phase: "speed", Name: "Card speed", Speed: speed})
 	notify(Progress{Phase: "complete", Name: "Written and verified", Done: total, Total: total})
 	return nil
 }

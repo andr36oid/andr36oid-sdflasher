@@ -17,9 +17,12 @@
   "Card": "存储卡",
   "Card inspection failed.": "存储卡检查失败。",
   "Card operations": "存储卡操作",
+  "Card speed": "存储卡速度",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "存储卡速度：写入 %.0f MB/s，每次小读取 %.1f ms，每次小写入 %.1f ms",
   "Check and write": "检查并写入",
   "Check the selected image and card, then try again.": "检查所选镜像和存储卡，然后重试。",
   "Checking GitHub releases…": "正在检查 GitHub 版本…",
+  "Checking card speed": "正在检查存储卡速度",
   "Checking source image": "正在检查源镜像",
   "Checking the release image…": "正在检查版本镜像…",
   "Choose a card": "选择存储卡",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "之前的安装已恢复并验证。",
   "This DTB can’t be converted": "这个 DTB 无法转换",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "这个 DTB 是程序根据你的掌机自带的 DTB 生成的，没有在你的掌机上测试过。如果一直黑屏或按键无效，请不使用它重新写入存储卡。",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "这张存储卡速度较慢。Android 从存储卡运行，因此应用可能启动缓慢，游戏可能卡顿。为获得流畅体验，请使用知名品牌、标有 A1 或 A2 的存储卡。",
   "Treble installation": "Treble 安装",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "USB 访问使用 libaums 和 libusb，与 EtchDroid 使用相同的 USB 协议栈。",
   "USB permission was denied.": "USB 权限被拒绝。",
@@ -180,6 +184,7 @@
   "microSD card": "microSD 卡",
   "preflight": "写入前检查",
   "restoring": "正在恢复",
+  "speed": "速度",
   "verifying": "正在验证",
   "writing": "正在写入"
 }

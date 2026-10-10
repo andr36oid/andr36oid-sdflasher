@@ -17,9 +17,12 @@
   "Card": "Karte",
   "Card inspection failed.": "Kartenprüfung fehlgeschlagen.",
   "Card operations": "Kartenvorgänge",
+  "Card speed": "Kartengeschwindigkeit",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "Kartengeschwindigkeit: %.0f MB/s beim Schreiben, %.1f ms pro kleinem Lesezugriff, %.1f ms pro kleinem Schreibzugriff",
   "Check and write": "Prüfen und schreiben",
   "Check the selected image and card, then try again.": "Prüfe das ausgewählte Image und die Karte und versuche es erneut.",
   "Checking GitHub releases…": "GitHub-Releases werden geprüft…",
+  "Checking card speed": "Kartengeschwindigkeit wird geprüft",
   "Checking source image": "Quell-Image wird geprüft",
   "Checking the release image…": "Release-Image wird geprüft…",
   "Choose a card": "Karte auswählen",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "Die vorherige Installation wurde wiederhergestellt und geprüft.",
   "This DTB can’t be converted": "Diese DTB lässt sich nicht umwandeln",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "Diese DTB wurde von einem Programm aus der eigenen DTB deiner Konsole erstellt und wurde auf deiner Konsole nicht getestet. Wenn der Bildschirm dunkel bleibt oder die Tasten nicht funktionieren, beschreibe die Karte noch einmal ohne sie.",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "Diese Karte ist langsam. Android läuft von der Karte, deshalb können Apps langsam starten und Spiele ruckeln. Für ein flüssiges Erlebnis nimm eine Karte einer bekannten Marke mit der Kennzeichnung A1 oder A2.",
   "Treble installation": "Treble-Installation",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "Der USB-Zugriff nutzt libaums und libusb, denselben USB-Stack wie EtchDroid.",
   "USB permission was denied.": "USB-Zugriff wurde verweigert.",
@@ -180,6 +184,7 @@
   "microSD card": "microSD-Karte",
   "preflight": "Sicherheitsprüfung",
   "restoring": "Wiederherstellen",
+  "speed": "Geschwindigkeit",
   "verifying": "Überprüfen",
   "writing": "Schreiben"
 }

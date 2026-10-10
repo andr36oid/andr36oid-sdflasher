@@ -17,9 +17,12 @@
   "Card": "Картка",
   "Card inspection failed.": "Не вдалося перевірити картку.",
   "Card operations": "Операції з карткою",
+  "Card speed": "Швидкість картки",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "Швидкість картки: запис %.0f МБ/с, %.1f мс на невелике читання, %.1f мс на невеликий запис",
   "Check and write": "Перевірка та запис",
   "Check the selected image and card, then try again.": "Перевір вибраний образ і картку, а потім спробуй ще раз.",
   "Checking GitHub releases…": "Перевірка випусків на GitHub…",
+  "Checking card speed": "Перевірка швидкості картки",
   "Checking source image": "Перевірка вихідного образу",
   "Checking the release image…": "Перевірка образу випуску…",
   "Choose a card": "Вибери картку",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "Попередню установку відновлено й перевірено.",
   "This DTB can’t be converted": "Цей DTB не можна перетворити",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "Цей DTB створено програмою з власного DTB твоєї консолі, і на ній його не перевіряли. Якщо екран лишається темним або кнопки не працюють, запиши картку знову без нього.",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "Ця картка повільна. Android працює з картки, тому застосунки можуть довго запускатися, а ігри — підгальмовувати. Для плавної роботи візьми картку відомого бренду з маркуванням A1 або A2.",
   "Treble installation": "Установка Treble",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "Для доступу до USB використовуються libaums і libusb — той самий USB-стек, що й в EtchDroid.",
   "USB permission was denied.": "Доступ до USB заборонено.",
@@ -180,6 +184,7 @@
   "microSD card": "Картка microSD",
   "preflight": "Перевірка перед записом",
   "restoring": "Відновлення",
+  "speed": "швидкість",
   "verifying": "Перевірка запису",
   "writing": "Запис"
 }

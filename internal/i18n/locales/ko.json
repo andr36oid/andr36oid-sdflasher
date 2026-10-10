@@ -17,9 +17,12 @@
   "Card": "카드",
   "Card inspection failed.": "카드를 검사하지 못했어요.",
   "Card operations": "카드 작업",
+  "Card speed": "카드 속도",
+  "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write": "카드 속도: 쓰기 %.0f MB/s, 작은 읽기당 %.1f ms, 작은 쓰기당 %.1f ms",
   "Check and write": "확인 후 쓰기",
   "Check the selected image and card, then try again.": "선택한 이미지와 카드를 확인한 후 다시 시도하세요.",
   "Checking GitHub releases…": "GitHub 릴리스 확인 중…",
+  "Checking card speed": "카드 속도 확인 중",
   "Checking source image": "원본 이미지 확인 중",
   "Checking the release image…": "릴리스 이미지 확인 중…",
   "Choose a card": "카드 선택",
@@ -135,6 +138,7 @@
   "The previous installation was restored and verified.": "이전 설치를 복원하고 검증했어요.",
   "This DTB can’t be converted": "이 DTB는 변환할 수 없어요",
   "This DTB was made by a program from your console’s own DTB. It has not been tested on your console. If the screen stays dark or the buttons don’t work, write the card again without it.": "이 DTB는 프로그램이 콘솔의 원래 DTB로 만든 거예요. 이 콘솔에서 테스트하지 않았어요. 화면이 계속 꺼져 있거나 버튼이 안 되면 이 DTB 없이 카드를 다시 쓰세요.",
+  "This card is slow. Android runs from the card, so apps may start slowly and games may stutter. For a smooth experience, use a card from a known brand marked A1 or A2.": "이 카드는 느려요. Android는 카드에서 실행되기 때문에 앱이 늦게 열리고 게임이 끊길 수 있어요. 원활하게 사용하려면 A1 또는 A2 표시가 있는 유명 브랜드 카드를 사용하세요.",
   "Treble installation": "Treble 설치",
   "USB access uses libaums and libusb, the same USB stack used by EtchDroid.": "USB 접근에는 EtchDroid와 같은 USB 스택인 libaums와 libusb를 써요.",
   "USB permission was denied.": "USB 권한이 거부됐어요.",
@@ -180,6 +184,7 @@
   "microSD card": "microSD 카드",
   "preflight": "사전 검사 중",
   "restoring": "복원 중",
+  "speed": "속도",
   "verifying": "검증 중",
   "writing": "기록 중"
 }

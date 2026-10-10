@@ -616,7 +616,11 @@ public final class MainActivity extends Activity {
     }
     if (!busy && !WorkState.result.isEmpty() && !WorkState.result.equals(lastResult)) {
       lastResult = WorkState.result;
-      info("Written and verified", WorkState.message);
+      new AlertDialog.Builder(this)
+          .setTitle(t("Written and verified"))
+          .setMessage(t(WorkState.message) + speedText())
+          .setPositiveButton(t("OK"), null)
+          .show();
     }
   }
 
@@ -1012,6 +1016,7 @@ public final class MainActivity extends Activity {
                   true,
                   () -> {
                     try (UsbCard.Connection disk = target.open(app)) {
+                      WorkState.speed = null;
                       WorkState.result = WorkState.engine.write(disk, input, WorkState::event);
                       WorkState.message =
                           updating
@@ -1122,6 +1127,27 @@ public final class MainActivity extends Activity {
             })
         .setNegativeButton(t("Close"), null)
         .show();
+  }
+
+  /** The card speed measured while writing, with a warning for slow cards. */
+  private String speedText() {
+    JSONObject s = WorkState.speed;
+    if (s == null || s.optDouble("write_mbps") <= 0) return "";
+    String text =
+        "\n\n"
+            + t(
+                "Card speed: %.0f MB/s writing, %.1f ms per small read, %.1f ms per small write",
+                s.optDouble("write_mbps"),
+                s.optDouble("read_latency_ms"),
+                s.optDouble("write_latency_ms"));
+    if (s.optBoolean("slow"))
+      text +=
+          "\n\n"
+              + t(
+                  "This card is slow. Android runs from the card, so apps may start slowly and"
+                      + " games may stutter. For a smooth experience, use a card from a known"
+                      + " brand marked A1 or A2.");
+    return text;
   }
 
   private void info(String title, String message) {

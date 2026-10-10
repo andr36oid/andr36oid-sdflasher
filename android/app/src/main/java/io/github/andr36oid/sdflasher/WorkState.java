@@ -17,7 +17,7 @@ final class WorkState {
   static volatile Session engine;
   static volatile JSONObject appUpdate;
   static boolean updateCheckStarted, updateShown;
-  static volatile JSONObject image, card, progress, plan;
+  static volatile JSONObject image, card, progress, plan, speed;
   static volatile org.json.JSONArray releases;
   static volatile String reviewOptions = "";
   static volatile boolean reviewReady = false;
@@ -112,7 +112,12 @@ final class WorkState {
 
   static void event(String event) {
     try {
-      progress = new JSONObject(event);
+      JSONObject p = new JSONObject(event);
+      if (p.has("speed")) {
+        speed = p.getJSONObject("speed");
+        return;
+      }
+      progress = p;
       if (progress.has("plan")) plan = progress.getJSONObject("plan");
       revision++;
     } catch (Exception ignored) {
