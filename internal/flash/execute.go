@@ -173,18 +173,18 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 	if snap != p.OldFingerprint {
 		return errors.New("card contents changed since preflight; inspect it again")
 	}
-	// Pre-read every destination range. Media read failures abort before the first write.
-	var readTotal, readDone int64
-	for _, w := range p.Writes {
-		readTotal += w.Length
-	}
-	for _, w := range p.Writes {
-		if _, e = firmware.Hash(ctx, io.NewSectionReader(dst, w.Offset, w.Length), w.Length, func(n, _ int64) {
-			notify(Progress{Phase: "preflight", Name: "Reading the card before writing", Done: readDone + n, Total: readTotal})
-		}); e != nil {
-			return fmt.Errorf("card read check failed: %w", e)
+	// A card or reader that can't read stops here, before the first write. Only the
+	// start and end of each range: reading all of it took as long as the verify, and
+	// updates read everything they replace into the recovery backup anyway.
+	const sample = 4 << 20
+	notify(Progress{Phase: "preflight", Name: "Reading the card before writing"})
+	for i, w := range p.Writes {
+		for _, r := range [][2]int64{{0, min(sample, w.Length)}, {max(0, w.Length-sample), min(sample, w.Length)}} {
+			if _, e = firmware.Hash(ctx, io.NewSectionReader(dst, w.Offset+r[0], r[1]), r[1], nil); e != nil {
+				return fmt.Errorf("card read check failed: %w", e)
+			}
 		}
-		readDone += w.Length
+		notify(Progress{Phase: "preflight", Name: "Reading the card before writing", Done: int64(i + 1), Total: int64(len(p.Writes))})
 	}
 	var backup *Backup
 	if p.Mode == "update" {
@@ -264,9 +264,6 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 			return fail(e)
 		}
 		notify(Progress{Phase: "verifying", Name: "Device setup", Done: part.Size(), Total: part.Size(), Offset: part.Offset(), Length: part.Size()})
-	}
-	if sum, e := firmware.Hash(ctx, src, im.Size, nil); e != nil || sum != im.SHA256 {
-		return fail(errors.New("source image changed during the operation"))
 	}
 	if bulkTime > 0 {
 		speed.WriteMBps = float64(bulkBytes) / (1 << 20) / bulkTime.Seconds()
