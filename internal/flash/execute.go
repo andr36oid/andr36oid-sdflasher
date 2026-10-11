@@ -157,7 +157,9 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 		notify = func(Progress) {}
 	}
 	notify(Progress{Phase: "preflight", Name: "Checking source image", Plan: p})
-	sum, e := firmware.Hash(ctx, src, im.Size, nil)
+	sum, e := firmware.Hash(ctx, src, im.Size, func(n, total int64) {
+		notify(Progress{Phase: "preflight", Name: "Checking source image", Done: n, Total: total})
+	})
 	if e != nil {
 		return e
 	}
@@ -172,10 +174,17 @@ func Execute(ctx context.Context, dst Device, im *firmware.Image, p *Plan, bootP
 		return errors.New("card contents changed since preflight; inspect it again")
 	}
 	// Pre-read every destination range. Media read failures abort before the first write.
+	var readTotal, readDone int64
 	for _, w := range p.Writes {
-		if _, e = firmware.Hash(ctx, io.NewSectionReader(dst, w.Offset, w.Length), w.Length, nil); e != nil {
+		readTotal += w.Length
+	}
+	for _, w := range p.Writes {
+		if _, e = firmware.Hash(ctx, io.NewSectionReader(dst, w.Offset, w.Length), w.Length, func(n, _ int64) {
+			notify(Progress{Phase: "preflight", Name: "Reading the card before writing", Done: readDone + n, Total: readTotal})
+		}); e != nil {
 			return fmt.Errorf("card read check failed: %w", e)
 		}
+		readDone += w.Length
 	}
 	var backup *Backup
 	if p.Mode == "update" {
