@@ -40,6 +40,16 @@ public class ReleaseTest {
     }
   }
 
+  /** The colour behind a view: the nearest parent with a plain colour background. */
+  private static int pageColor(View view) {
+    for (android.view.ViewParent p = view.getParent(); p instanceof View; p = p.getParent()) {
+      android.graphics.drawable.Drawable d = ((View) p).getBackground();
+      if (d instanceof android.graphics.drawable.ColorDrawable)
+        return ((android.graphics.drawable.ColorDrawable) d).getColor();
+    }
+    throw new AssertionError("no background colour behind " + view);
+  }
+
   private TextView findText(View view, String text) {
     if (view instanceof TextView && ((TextView) view).getText().toString().equals(text))
       return (TextView) view;
@@ -78,10 +88,7 @@ public class ReleaseTest {
             assertThemeIsDark(activity, dark);
             TextView title = findText(activity.getWindow().getDecorView(), "andr36oid SD Flasher");
             assertNotNull(title);
-            int background =
-                ((android.graphics.drawable.ColorDrawable)
-                        ((View) title.getParent()).getBackground())
-                    .getColor();
+            int background = pageColor(title);
             assertEquals(dark, android.graphics.Color.red(title.getCurrentTextColor()) > 128);
             assertEquals(!dark, android.graphics.Color.red(background) > 128);
             android.app.AlertDialog dialog =
