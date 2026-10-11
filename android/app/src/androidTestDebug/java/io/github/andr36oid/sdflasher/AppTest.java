@@ -179,15 +179,16 @@ public class AppTest {
                   activity.getApplicationContext(),
                   false,
                   () -> {
+                    // progress like a real write: a determinate bar. An indeterminate one
+                    // keeps animating on Android 6 even with animations off, so the main
+                    // thread never idles and recreate() would wait until this work ends.
+                    WorkState.event("{\"phase\":\"Writing\",\"done\":1,\"total\":2}");
                     started.countDown();
                     finish.await(30, TimeUnit.SECONDS);
                   }));
       assertTrue(started.await(10, TimeUnit.SECONDS));
       scenario.recreate();
-      // Read directly: onActivity waits for the main thread to go idle, and on Android 6
-      // the busy screen's endless progress bar keeps it from idling until the work ends.
-      assertTrue(WorkState.busy);
-      finish.countDown();
+      scenario.onActivity(activity -> assertTrue(WorkState.busy));
     } finally {
       finish.countDown();
     }
