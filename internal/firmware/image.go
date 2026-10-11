@@ -300,7 +300,9 @@ func Profiles(fs filesystem.FileSystem) ([]Profile, error) {
 				}
 				kernel = path.Join(dir, n)
 			}
-			if (strings.HasSuffix(n, ".dtb") && (strings.Contains(n, "kernel") || strings.Contains(n, "uboot"))) || n == "logo.bmp" || n == "logo_kernel.bmp" || n == "boot.ini-android" {
+			if (strings.HasSuffix(n, ".dtb") && (strings.Contains(n, "kernel") || strings.Contains(n, "uboot"))) || n == "logo.bmp" || n == "logo_kernel.bmp" || n == "boot.ini-android" ||
+				// the charge screens, drawn for this screen's size
+				(strings.HasPrefix(n, "battery_") && strings.HasSuffix(n, ".bmp")) {
 				files = append(files, path.Join(dir, n))
 			}
 		}

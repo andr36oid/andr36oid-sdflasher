@@ -23,6 +23,20 @@ func TestReleaseImage(t *testing.T) {
 		t.Fatal("missing panel profiles")
 	}
 	for _, p := range im.Profiles {
+		if p.ID != "Devices/R46H" {
+			continue
+		}
+		charge := 0
+		for _, n := range p.BootFiles {
+			if filepath.Base(n) == "battery_0.bmp" || filepath.Base(n) == "battery_fail.bmp" {
+				charge++
+			}
+		}
+		if charge != 2 {
+			t.Fatal("R46H charge screens not copied", p.BootFiles)
+		}
+	}
+	for _, p := range im.Profiles {
 		if p.ID == "Panels/Panel4" {
 			for _, update := range []bool{false, true} {
 				boot, e := PrepareBoot(im, p.ID, true, update, "", t.TempDir())
