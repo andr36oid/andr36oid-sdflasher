@@ -184,7 +184,10 @@ public class AppTest {
                   }));
       assertTrue(started.await(10, TimeUnit.SECONDS));
       scenario.recreate();
-      scenario.onActivity(activity -> assertTrue(WorkState.busy));
+      // Read directly: onActivity waits for the main thread to go idle, and on Android 6
+      // the busy screen's endless progress bar keeps it from idling until the work ends.
+      assertTrue(WorkState.busy);
+      finish.countDown();
     } finally {
       finish.countDown();
     }
