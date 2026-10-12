@@ -400,5 +400,11 @@ func (s *Session) ConvertDTB(path string) (string, error) {
 	return encode(conversion{Family: c.Family.Label(), Profile: c.Profile, Model: c.Model, Width: c.Width, Height: c.Height, Warnings: append([]string{}, c.Warnings...), Report: c.Report()})
 }
 
+// TooOldImage is the build date (2006-01-02) of an image file name from before
+// September 2026, which this flasher refuses without opening it; "" otherwise.
+func TooOldImage(name string) string {
+	date, _ := firmware.TooOld(name)
+	return date
+}
 func Translate(locale, key string) string { return i18n.Text(locale, key) }
 func ResolveLocale(locale string) string  { return i18n.Resolve(locale) }

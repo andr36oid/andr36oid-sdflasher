@@ -35,6 +35,9 @@ final class WorkState {
   // a different system image (GSI) copied into app storage, "" for andr36oid's own
   static volatile String system = "", systemName = "";
   static volatile boolean systemAccepted = false;
+  // experimental profiles whose warning was agreed to
+  static final java.util.Set<String> experimentalOK =
+      java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
   static void clearSystem() {
     if (!system.isEmpty()) new java.io.File(system).delete();

@@ -25,7 +25,7 @@ func TestEveryStepRenders(t *testing.T) {
 	defer w.Close()
 	w.Resize(fyne.NewSize(820, 760))
 	drive := platform.Drive{Path: "/dev/sdb", Size: 64 << 30, Name: "Generic SD reader"}
-	s := &screen{win: w, locale: "en", im: &firmware.Image{Version: "lineage-18.1-20261009", Profiles: []firmware.Profile{{ID: "Panels/Panel4", Name: "R36S — Panel 4", Console: "R36S"}, {ID: "Experimental/EE-G80-Panel8", Name: "G80C / G80CA / G80D — Panel 8", Console: "G80", Experimental: true}}}, profile: "Experimental/EE-G80-Panel8", drive: &drive, drives: []platform.Drive{drive}, card: &flash.Card{Reason: "no andr36oid partitions"}, custom: "/home/u/rk3326-r36s-linux.dtb", customAccepted: true, convert: true}
+	s := &screen{win: w, locale: "en", im: &firmware.Image{Version: "lineage-18.1-20261009", Profiles: []firmware.Profile{{ID: "Panels/Panel4", Name: "R36S — Panel 4", Console: "R36S"}, {ID: "Experimental/EE-G80-Panel8", Name: "G80C / G80CA / G80D — Panel 8", Console: "G80", Experimental: true}}}, profile: "Experimental/EE-G80-Panel8", drive: &drive, drives: []platform.Drive{drive}, card: &flash.Card{Reason: "no andr36oid partitions"}, custom: "/home/u/rk3326-r36s-linux.dtb", customAccepted: true, convert: true, experimentalOK: map[string]bool{"Experimental/EE-G80-Panel8": true}}
 	dir := os.Getenv("SDFLASHER_SCREENSHOTS")
 	for _, l := range i18n.Languages {
 		s.locale = l.Code
@@ -107,5 +107,30 @@ func TestSingleProfileConsolePicksItsProfile(t *testing.T) {
 		if s.profile != id || s.profileSelect.Selected != name {
 			t.Fatalf("%s: profile %q, shown %q", name, s.profile, s.profileSelect.Selected)
 		}
+	}
+}
+
+func TestExperimentalNeedsAgreement(t *testing.T) {
+	a := test.NewApp()
+	defer a.Quit()
+	w := a.NewWindow("test")
+	defer w.Close()
+	w.Resize(fyne.NewSize(820, 760))
+	drive := platform.Drive{Path: "/dev/sdb", Size: 64 << 30, Name: "Generic SD reader"}
+	s := &screen{win: w, locale: "en", im: &firmware.Image{Version: "lineage-18.1-20261009", Profiles: []firmware.Profile{{ID: "Panels/Panel4", Name: "R36S — Panel 4", Console: "R36S"}, {ID: "Experimental/EE-G80-Panel8", Name: "G80C / G80CA / G80D — Panel 8", Console: "G80", Experimental: true}}}, drive: &drive, drives: []platform.Drive{drive}, card: &flash.Card{Reason: "no andr36oid partitions"}}
+	s.build()
+	s.console.SetSelected("G80")
+	if s.profile != "" || !s.action.Disabled() {
+		t.Fatal("experimental profile used before the warning was agreed to")
+	}
+	s.experimentalOK = map[string]bool{"Experimental/EE-G80-Panel8": true}
+	s.profileSelect.ClearSelected()
+	s.profileSelect.SetSelected("G80C / G80CA / G80D — Panel 8 (experimental)")
+	if s.profile != "Experimental/EE-G80-Panel8" || s.action.Disabled() {
+		t.Fatal("agreed experimental profile not used")
+	}
+	s.console.SetSelected("R36S")
+	if s.profile != "Panels/Panel4" {
+		t.Fatal("normal profile not used without a warning")
 	}
 }

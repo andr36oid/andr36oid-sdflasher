@@ -161,17 +161,17 @@ func javaKeys(t *testing.T) (used map[string]string, all map[string]bool) {
 		}
 		src := javaConcat.ReplaceAllString(string(b), "")
 		for _, m := range javaAny.FindAllStringSubmatch(src, -1) {
-			all[m[1]] = true
+			all[javaUnescape(m[1])] = true
 		}
 		for _, re := range javaCalls {
 			for _, m := range re.FindAllStringSubmatch(src, -1) {
 				for _, g := range m[1:] {
 					if strings.Contains(g, `"`) { // a list of strings
 						for _, s := range javaAny.FindAllStringSubmatch(g, -1) {
-							used[s[1]] = filepath.Base(p)
+							used[javaUnescape(s[1])] = filepath.Base(p)
 						}
 					} else if g != "" {
-						used[g] = filepath.Base(p)
+						used[javaUnescape(g)] = filepath.Base(p)
 					}
 				}
 			}
@@ -210,4 +210,13 @@ func TestNoUnusedKeys(t *testing.T) {
 			t.Errorf("en.json key %q is not used anywhere", k)
 		}
 	}
+}
+
+// javaUnescape: the text of a Java string literal's inside (\n, \", \\ and \uXXXX
+// mean the same in Go)
+func javaUnescape(s string) string {
+	if u, e := strconv.Unquote(`"` + s + `"`); e == nil {
+		return u
+	}
+	return s
 }

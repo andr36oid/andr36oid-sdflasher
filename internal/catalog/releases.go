@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/andr36oid/andr36oid-sdflasher/internal/firmware"
 )
 
 const Repository = "andr36oid/releases"
@@ -26,11 +28,12 @@ type Asset struct {
 	Release string `json:"-"`
 }
 type release struct {
-	Name   string  `json:"name"`
-	Tag    string  `json:"tag_name"`
-	Draft  bool    `json:"draft"`
-	Pre    bool    `json:"prerelease"`
-	Assets []Asset `json:"assets"`
+	Name      string    `json:"name"`
+	Tag       string    `json:"tag_name"`
+	Draft     bool      `json:"draft"`
+	Pre       bool      `json:"prerelease"`
+	Published time.Time `json:"published_at"`
+	Assets    []Asset   `json:"assets"`
 }
 
 func client() *http.Client { return &http.Client{Timeout: 30 * time.Minute} }
@@ -57,29 +60,40 @@ func List(ctx context.Context) ([]Asset, error) {
 		if e != nil {
 			return nil, e
 		}
-		for _, r := range rel {
-			if r.Draft {
-				continue
-			}
-			for _, a := range r.Assets {
-				n := strings.ToLower(a.Name)
-				if strings.HasSuffix(n, ".img.zip") || strings.HasSuffix(n, ".img") {
-					a.Release = r.Name
-					if a.Release == "" {
-						a.Release = r.Tag
-					}
-					if r.Pre {
-						a.Release += " (pre-release)"
-					}
-					out = append(out, a)
-				}
-			}
-		}
+		out = append(out, usable(rel)...)
 		if len(rel) < 100 {
 			break
 		}
 	}
 	return out, nil
+}
+
+// usable: the image files of a page of releases that this flasher can write
+func usable(rel []release) []Asset {
+	var out []Asset
+	for _, r := range rel {
+		// builds older than firmware.OldestBuild don't work with this flasher
+		if r.Draft || r.Published.Before(firmware.OldestBuild) {
+			continue
+		}
+		for _, a := range r.Assets {
+			n := strings.ToLower(a.Name)
+			if _, old := firmware.TooOld(a.Name); old {
+				continue
+			}
+			if strings.HasSuffix(n, ".img.zip") || strings.HasSuffix(n, ".img") {
+				a.Release = r.Name
+				if a.Release == "" {
+					a.Release = r.Tag
+				}
+				if r.Pre {
+					a.Release += " (pre-release)"
+				}
+				out = append(out, a)
+			}
+		}
+	}
+	return out
 }
 func Download(ctx context.Context, a Asset, dir string, progress func(int64, int64)) (string, error) {
 	u, e := url.Parse(a.URL)

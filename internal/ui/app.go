@@ -42,6 +42,7 @@ type screen struct {
 	convert                             bool   // custom is the console's own DTB, converted while writing
 	system                              string // a different system image (GSI), "" for andr36oid's
 	systemAccepted                      bool
+	experimentalOK                      map[string]bool // experimental profiles whose warning was agreed to
 	systemLabel                         *widget.Label
 	busy                                bool
 	releaseLabel, cardLabel, help       *widget.Label
@@ -136,16 +137,31 @@ func (s *screen) build() {
 	})
 	s.console.PlaceHolder = s.t("Choose your console / board family")
 	s.profileSelect = widget.NewSelect(nil, func(label string) {
+		s.profile = ""
+		var chosen *firmware.Profile
 		if s.im != nil {
-			for _, p := range s.im.Profiles {
+			for i, p := range s.im.Profiles {
 				name := p.Name
 				if p.Experimental {
 					name += " (" + s.t("experimental") + ")"
 				}
 				if name == label {
-					s.profile = p.ID
+					chosen = &s.im.Profiles[i]
 				}
 			}
+		}
+		if chosen != nil && chosen.Experimental {
+			p := *chosen
+			s.confirmExperimental(p, func(ok bool) {
+				if ok {
+					s.profile = p.ID
+				} else {
+					s.profileSelect.ClearSelected()
+				}
+				s.ready()
+			})
+		} else if chosen != nil {
+			s.profile = chosen.ID
 		}
 		s.ready()
 	})
@@ -292,6 +308,12 @@ func (s *screen) chooseImage() {
 	d.Show()
 }
 func (s *screen) loadImage(p string) {
+	// a build too old for this flasher: refused by its name, before it is unpacked
+	if date, old := firmware.TooOld(p); old {
+		s.releaseLabel.SetText(s.t("Image rejected. Choose an andr36oid Treble release."))
+		s.info(s.t("This image is too old"), s.t("This image was built on %s. Builds from before September 2026 don't work with this flasher. Download a current release instead.", date), s.win)
+		return
+	}
 	s.setBusy(true)
 	s.im = nil
 	s.profile = ""

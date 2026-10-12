@@ -714,19 +714,76 @@ public final class MainActivity extends Activity {
     }
     if (profiles.size() == 1) {
       // a console with one profile (R46H, R50S, ...) needs no second choice
-      WorkState.profile = profiles.get(0).optString("id");
-      WorkState.revision++;
+      useProfile(profiles.get(0));
       return;
     }
     new AlertDialog.Builder(this)
         .setTitle(t("Choose your board and screen"))
-        .setItems(
-            names.toArray(new String[0]),
-            (d, n) -> {
-              WorkState.profile = profiles.get(n).optString("id");
-              WorkState.revision++;
-            })
+        .setItems(names.toArray(new String[0]), (d, n) -> useProfile(profiles.get(n)))
         .show();
+  }
+
+  // An experimental profile is only used after its warning: a direct text, a checkbox
+  // and an "I agree" button that works once the box is ticked. Asked once per profile
+  // while the app runs.
+  private void useProfile(JSONObject p) {
+    String id = p.optString("id");
+    if (!p.optBoolean("experimental") || WorkState.experimentalOK.contains(id)) {
+      WorkState.profile = id;
+      WorkState.revision++;
+      return;
+    }
+    WorkState.profile = "";
+    WorkState.revision++;
+    String tracker = "https://github.com/andr36oid/clone_issue_tracker";
+    LinearLayout box = new LinearLayout(this);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setPadding(dp(22), dp(8), dp(22), 0);
+    TextView name = new TextView(this);
+    name.setText(p.optString("name"));
+    name.setTypeface(null, android.graphics.Typeface.BOLD);
+    name.setTextSize(16);
+    box.addView(name);
+    TextView body = new TextView(this);
+    body.setText(
+        t(
+            "Nobody on the andr36oid team has tested this device tree on real hardware. It can"
+                + " leave the screen black or the buttons dead, and in the worst case put a wrong"
+                + " voltage on part of the board.\n\nSupport for experimental device trees is very"
+                + " limited. If something doesn't work:\n• Report it only in the clone issue"
+                + " tracker: %s\n• Attach all the boot files from a system that works on your"
+                + " console, for example from the SD card it came with: every .dtb file and the"
+                + " other files at the top of its first drive.\n• Answer every question in the"
+                + " issue form.\n\nReports without those files will be closed.",
+            tracker));
+    body.setTextColor(android.graphics.Color.rgb(0xE5, 0x39, 0x35));
+    body.setAutoLinkMask(android.text.util.Linkify.WEB_URLS);
+    body.setPadding(0, dp(8), 0, dp(8));
+    box.addView(body);
+    CheckBox check = new CheckBox(this);
+    check.setText(
+        t(
+            "I understand that this may not work, that support is very limited, and that I must"
+                + " attach my console's working boot files to any report."));
+    box.addView(check);
+    ScrollView scroll = new ScrollView(this);
+    scroll.addView(box);
+    AlertDialog dialog =
+        new AlertDialog.Builder(this)
+            .setTitle(t("Experimental device tree"))
+            .setView(scroll)
+            .setNegativeButton(t("Cancel"), null)
+            .setPositiveButton(
+                t("I agree"),
+                (d, w) -> {
+                  WorkState.experimentalOK.add(id);
+                  WorkState.profile = id;
+                  WorkState.revision++;
+                })
+            .show();
+    android.widget.Button agree = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+    agree.setEnabled(false);
+    check.setOnCheckedChangeListener((v, checked) -> agree.setEnabled(checked));
   }
 
   private void pick(int code) {
@@ -755,6 +812,20 @@ public final class MainActivity extends Activity {
     }
     if (request == 1 && !(lower.endsWith(".img") || lower.endsWith(".zip"))) {
       showError(t("Choose an .img or .img.zip release image."));
+      return;
+    }
+    // a build too old for this flasher: refused by its name, before it is copied
+    String oldBuild = request == 1 ? Mobile.tooOldImage(name) : "";
+    if (!oldBuild.isEmpty()) {
+      new AlertDialog.Builder(this)
+          .setTitle(t("This image is too old"))
+          .setMessage(
+              t(
+                  "This image was built on %s. Builds from before September 2026 don't work"
+                      + " with this flasher. Download a current release instead.",
+                  oldBuild))
+          .setPositiveButton(t("OK"), null)
+          .show();
       return;
     }
     final String extension =
