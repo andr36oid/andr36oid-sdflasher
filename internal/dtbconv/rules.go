@@ -305,8 +305,9 @@ func (c *conv) panel() error {
 	return nil
 }
 
-// fixRefresh stretches the vertical blanking so the screen runs at about
-// 60 Hz with the same pixel clock, as our hand-made DTBs do (refresh fix).
+// fixRefresh shortens the vertical blanking so a slow screen runs at about
+// 60 Hz with the same pixel clock. Faster screens keep their stock timing,
+// except the proven R36S Panel 4 one.
 func (c *conv) fixRefresh(t *Node) {
 	get := func(p string) float64 { v, _ := t.U32(p); return float64(v) }
 	clk := get("clock-frequency")
@@ -323,9 +324,15 @@ func (c *conv) fixRefresh(t *Node) {
 	newVt := math.Round(clk / (ht * 60))
 	// R36S Panel 4 timing (29 MHz, 640+46+2+44): keep its proven 165 lines
 	// of front porch, which Panel 2/3 also use.
-	if clk == 29000000 && get("hactive") == 640 && get("hfront-porch") == 46 && get("hsync-len") == 2 && get("hback-porch") == 44 &&
-		get("vactive") == 480 && get("vsync-len") == 2 && get("vback-porch") == 14 {
+	proven := clk == 29000000 && get("hactive") == 640 && get("hfront-porch") == 46 && get("hsync-len") == 2 && get("hback-porch") == 44 &&
+		get("vactive") == 480 && get("vsync-len") == 2 && get("vback-porch") == 14
+	if proven {
 		newVt = 480 + 165 + 2 + 14
+	} else if newVt > vt {
+		// Slowing a panel down means a longer front porch, and some panels
+		// stay dark with it (an RX6H at 60 Hz instead of its stock 80 Hz).
+		c.note("Screen refresh: %.2f Hz, left as it is (the stock timing).", hz)
+		return
 	}
 	vfp := get("vfront-porch") + newVt - vt
 	if vfp < 4 {

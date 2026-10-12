@@ -197,6 +197,31 @@ func TestConvertMovesPinsAndFixesRefresh(t *testing.T) {
 	}
 }
 
+func TestConvertKeepsFastStockRefresh(t *testing.T) {
+	in := toArkOS(t, bases.Genuine)
+	nt, e := (&conv{}).nativeTiming(in)
+	if e != nil {
+		t.Fatal(e)
+	}
+	// a 640x480 timing at about 80 Hz, like the RX6H's stock DTB
+	nt.SetU32("clock-frequency", 30000000)
+	nt.SetU32("hfront-porch", 46)
+	nt.SetU32("hsync-len", 2)
+	nt.SetU32("hback-porch", 44)
+	nt.SetU32("vfront-porch", 16)
+	nt.SetU32("vsync-len", 2)
+	nt.SetU32("vback-porch", 14)
+	r, e := Convert(in.Bytes(), bases)
+	if e != nil {
+		t.Fatal(e)
+	}
+	out, _ := Parse(r.Kernel)
+	ot, _ := (&conv{}).nativeTiming(out)
+	if vfp, _ := ot.U32("vfront-porch"); vfp != 16 {
+		t.Errorf("vertical front porch %d, want the stock 16", vfp)
+	}
+}
+
 func TestRefusals(t *testing.T) {
 	refused := func(name string, b []byte, want string) {
 		t.Helper()
