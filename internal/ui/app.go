@@ -119,7 +119,7 @@ func (s *screen) build() {
 		var opts []string
 		if s.im != nil {
 			for _, p := range s.im.Profiles {
-				if p.Console == name {
+				if p.For(name) {
 					label := p.Name
 					if p.Experimental {
 						label += " (" + s.t("experimental") + ")"
@@ -403,9 +403,11 @@ func (s *screen) populateImage() {
 	families := map[string]bool{}
 	var opts []string
 	for _, p := range s.im.Profiles {
-		if !families[p.Console] {
-			families[p.Console] = true
-			opts = append(opts, p.Console)
+		for _, c := range append([]string{p.Console}, p.AlsoFor...) {
+			if !families[c] {
+				families[c] = true
+				opts = append(opts, c)
+			}
 		}
 	}
 	sort.Strings(opts)

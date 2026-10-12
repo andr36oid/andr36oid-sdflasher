@@ -678,6 +678,16 @@ public final class MainActivity extends Activity {
     return null;
   }
 
+  /** The profile's own console, or one it is also listed under (a V12 wired like the G80). */
+  private static boolean listedFor(JSONObject p, String family) {
+    if (p.optString("console").equals(family)) return true;
+    JSONArray also = p.optJSONArray("also_for");
+    for (int i = 0; also != null && i < also.length(); i++) {
+      if (also.optString(i).equals(family)) return true;
+    }
+    return false;
+  }
+
   private void chooseConsole() {
     if (WorkState.image == null) {
       info("Choose a release", "Choose a release to see its supported consoles and panels.");
@@ -685,7 +695,12 @@ public final class MainActivity extends Activity {
     }
     TreeSet<String> names = new TreeSet<>();
     JSONArray ps = WorkState.image.optJSONArray("profiles");
-    for (int n = 0; n < ps.length(); n++) names.add(ps.optJSONObject(n).optString("console"));
+    for (int n = 0; n < ps.length(); n++) {
+      JSONObject p = ps.optJSONObject(n);
+      names.add(p.optString("console"));
+      JSONArray also = p.optJSONArray("also_for");
+      for (int i = 0; also != null && i < also.length(); i++) names.add(also.optString(i));
+    }
     String[] labels = names.toArray(new String[0]);
     new AlertDialog.Builder(this)
         .setTitle(t("Choose your console / board family"))
@@ -705,7 +720,7 @@ public final class MainActivity extends Activity {
     JSONArray ps = WorkState.image.optJSONArray("profiles");
     for (int n = 0; n < ps.length(); n++) {
       JSONObject p = ps.optJSONObject(n);
-      if (p.optString("console").equals(family)) {
+      if (listedFor(p, family)) {
         profiles.add(p);
         names.add(
             p.optString("name")

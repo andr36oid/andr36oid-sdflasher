@@ -129,3 +129,16 @@ func TestUserdataSizeFile(t *testing.T) {
 		}
 	}
 }
+
+func TestProfileListedForV12(t *testing.T) {
+	g80 := Profile{ID: "Experimental/EE-G80-Panel8", Console: "G80", AlsoFor: alsoFor["EE-G80-Panel8"]}
+	if !g80.For("G80") || !g80.For("R36S V12 clone") {
+		t.Fatalf("EE-G80-Panel8 should be listed for G80 and R36S V12 clone, has %q %q", g80.Console, g80.AlsoFor)
+	}
+	if g80.For("K36 / HG36") {
+		t.Fatal("EE-G80-Panel8 listed for K36")
+	}
+	if _, console := ProfileName("EE-V12-Var2"); console != "R36S V12 clone" {
+		t.Fatalf("the V12 console is called %q, alsoFor must use the same name", console)
+	}
+}

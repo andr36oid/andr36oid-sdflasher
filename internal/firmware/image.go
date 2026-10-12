@@ -26,9 +26,11 @@ import (
 )
 
 type Profile struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	Console      string   `json:"console"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Console string `json:"console"`
+	// Other consoles whose list shows it too, e.g. a V12 wired like the G80
+	AlsoFor      []string `json:"also_for,omitempty"`
 	Experimental bool     `json:"experimental"`
 	Kernel       string   `json:"kernel"`
 	BootFiles    []string `json:"boot_files"`
@@ -326,7 +328,7 @@ func Profiles(fs filesystem.FileSystem) ([]Profile, error) {
 			}
 			sum := sha256.Sum256(b)
 			label, console := ProfileName(path.Base(dir))
-			result = append(result, Profile{ID: strings.TrimPrefix(dir, "/"), Name: label, Console: console, Experimental: strings.Contains(dir, "Experimental"), Kernel: kernel, BootFiles: files, Hash: hex.EncodeToString(sum[:])})
+			result = append(result, Profile{ID: strings.TrimPrefix(dir, "/"), Name: label, Console: console, AlsoFor: alsoFor[path.Base(dir)], Experimental: strings.Contains(dir, "Experimental"), Kernel: kernel, BootFiles: files, Hash: hex.EncodeToString(sum[:])})
 		}
 		return nil
 	}
@@ -343,6 +345,26 @@ func Profiles(fs filesystem.FileSystem) ([]Profile, error) {
 
 var panelRE = regexp.MustCompile(`^Panel([0-6])$`)
 
+// For reports whether the profile is listed under console.
+func (p Profile) For(console string) bool {
+	if p.Console == console {
+		return true
+	}
+	for _, c := range p.AlsoFor {
+		if c == console {
+			return true
+		}
+	}
+	return false
+}
+
+// alsoFor lists profiles under more consoles than their own, by folder name.
+// R36S-V12 clones come wired like the G80 too: EE-G80-Panel8 gives them a picture
+// where EE-V12-Var2 leaves the screen lit but empty (tested on one, 2026-10-12).
+var alsoFor = map[string][]string{
+	"EE-G80-Panel8": {"R36S V12 clone"},
+}
+
 func ProfileName(id string) (string, string) {
 	if m := panelRE.FindStringSubmatch(id); m != nil {
 		return "R36S — Panel " + m[1], "R36S"
@@ -357,7 +379,7 @@ func ProfileName(id string) (string, string) {
 var profileNames = map[string]struct{ Name, Console string }{
 	"R36S-Plus": {"R36S Plus — 720 × 720", "R36S Plus"}, "R50S": {"R50S", "R50S"}, "R46H": {"R46H", "R46H"},
 	"R36S-V21": {"R36S V21", "R36S"}, "R36S-V22": {"R36S V22", "R36S"}, "R36S-V21-2551-2552": {"R36S V21 — Batches 2551/2552", "R36S"}, "R36S-Y02-Y07": {"R36S Y02 / RG36S Y07", "R36S"}, "R36S-V30": {"R36S V30", "R36S"}, "R36S-V30-2603": {"R36S V30 — Batch 2603", "R36S"}, "R36S-Panel3-Alt": {"R36S — Panel 3 (alternate timings)", "R36S"},
-	"EE-G80-Panel8": {"G80C / G80CA / G80D — Panel 8", "G80"}, "EE-G80-Panel9": {"G80CA — Panel 9", "G80"}, "EE-K36-Panel1": {"K36 / HG36 / L35 / R36 Pro / ANS11 — Panel 1", "K36 / HG36"}, "EE-K36-Panel4": {"K36 / RX6S / RX6H — Panel 4", "K36 / HG36"}, "EE-V12-Var2": {"R36S V12 clone — Variant 2", "R36S V12 clone"}, "EE-V12-Var3-Panel3": {"R36S V12 clone — Variant 3, Panel 3", "R36S V12 clone"}, "EE-V12-Var3-PanelA": {"R36S V12 clone — Variant 3, Panel A", "R36S V12 clone"},
+	"EE-G80-Panel8": {"G80C / G80CA / G80D / R36S V12 wired like the G80 — Panel 8", "G80"}, "EE-G80-Panel9": {"G80CA — Panel 9", "G80"}, "EE-K36-Panel1": {"K36 / HG36 / L35 / R36 Pro / ANS11 — Panel 1", "K36 / HG36"}, "EE-K36-Panel4": {"K36 / RX6S / RX6H — Panel 4", "K36 / HG36"}, "EE-V12-Var2": {"R36S V12 clone — Variant 2", "R36S V12 clone"}, "EE-V12-Var3-Panel3": {"R36S V12 clone — Variant 3, Panel 3", "R36S V12 clone"}, "EE-V12-Var3-PanelA": {"R36S V12 clone — Variant 3, Panel A", "R36S V12 clone"},
 	"R36-Ultra": {"R36 Ultra / GR36 — 720 × 720", "R36 Ultra"}, "R36-Max": {"R36 Max — 720 × 720", "R36 Max"}, "R39-Max": {"R39 Max / H50 Pro / T16 Max V2 / ANS13 — 720 × 720", "R39 Max"}, "T16-Max": {"T16 Max — First revision, 720 × 720", "T16 Max"},
 	"Soy-Panel5": {"Soy Sauce — Panel 5", "Soy Sauce"}, "Soy-Panel5-253x": {"Soy Sauce — Panel 5, Batch 253x", "Soy Sauce"}, "Soy-Panel6": {"Soy Sauce — Panel 6", "Soy Sauce"}, "Soy-Panel7": {"Soy Sauce — Panel 7", "Soy Sauce"}, "Soy-Panel7-253x": {"Soy Sauce — Panel 7, Batch 253x", "Soy Sauce"}, "Soy-V04-Panel2": {"Soy Sauce Y3506 V04 — Panel 2", "Soy Sauce"}, "Soy-V05-2601": {"Soy Sauce Y3506 V05 — Batch 2601", "Soy Sauce"},
 }
