@@ -234,6 +234,12 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 			p.Writes = append(p.Writes, Write{Range: Range{q.Name, q.Offset(), q.Size()}, SourceOffset: q.Offset(), Boot: q.Name == "BOOT"})
 		}
 	}
+	// Windows only gets BOOT and EASYROMS; the rest would each pop up "format disk?"
+	for i := range p.Table.Parts {
+		if n := p.Table.Parts[i].Name; n != "BOOT" && n != "EASYROMS" {
+			p.Table.Parts[i].Flags |= layout.NoDriveLetter
+		}
+	}
 	if e := p.Table.Validate(true); e != nil {
 		return nil, fmt.Errorf("cannot preserve this layout: %w", e)
 	}

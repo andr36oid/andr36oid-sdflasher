@@ -61,6 +61,10 @@ func GUID() [16]byte {
 	return b
 }
 
+// NoDriveLetter is GPT attribute bit 63: Windows gives the partition no drive letter, so
+// it doesn't offer to format the ones it can't read. Linux and Android ignore it.
+const NoDriveLetter uint64 = 1 << 63
+
 var LinuxType = [16]byte{0xaf, 0x3d, 0xc6, 0x0f, 0x83, 0x84, 0x72, 0x47, 0x8e, 0x79, 0x3d, 0x69, 0xd8, 0x47, 0x7d, 0xe4}
 
 func Read(r io.ReaderAt, size int64) (Table, error) {
