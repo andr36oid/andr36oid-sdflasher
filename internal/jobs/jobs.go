@@ -169,7 +169,7 @@ func Worker(job string) error {
 				return e
 			}
 		}
-		boot, e := firmware.PrepareBoot(im, req.Profile, p.NoROMs, req.Mode == "update", req.CustomDTB, dir, firmware.BootOptions{ConvertDTB: req.ConvertDTB, UserdataGiB: p.UserdataGiB})
+		boot, e := firmware.PrepareBoot(im, req.Profile, p.NoROMs, req.Mode == "update", req.CustomDTB, dir, firmware.BootOptions{ConvertDTB: req.ConvertDTB, UserdataGiB: p.UserdataGiB, Keep: p.Keep})
 		if e != nil {
 			return e
 		}
