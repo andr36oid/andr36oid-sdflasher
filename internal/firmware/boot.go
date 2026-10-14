@@ -110,7 +110,8 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 	if !bytes.Contains(script, []byte("ramdisk.uimg")) {
 		return "", errors.New("selected profile has no Treble boot script")
 	}
-	re := regexp.MustCompile(`(?m)^\s*load\s+mmc\s+\S+\s+\S+\s+([^\s]+\.dtb)\s*$`)
+	// "load mmc 1:1 ${fdt_addr_r} x.dtb", or since 2026-10-13 "if load ... x.dtb; then"
+	re := regexp.MustCompile(`(?m)^\s*(?:if\s+)?load\s+mmc\s+\S+\s+\S+\s+([^\s;]+\.dtb)\s*(?:;\s*then)?\s*$`)
 	m := re.FindSubmatch(script)
 	if len(m) != 2 {
 		return "", errors.New("cannot determine Android DTB destination")
