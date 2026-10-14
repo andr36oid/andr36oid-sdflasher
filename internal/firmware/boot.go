@@ -23,12 +23,19 @@ var UBootDTBNames = []string{
 	"rg351mp-uboot.dtb", "rg351p-uboot.dtb", "rg351v-uboot.dtb",
 }
 
+// KeptFiles are the user's own settings on BOOT, carried over on an update: Kernel
+// Tweaks (andr36oid's Settings > System > Kernel Tweaks) saves the kernel command line
+// additions there, the refresh rates the panel may use among them.
+var KeptFiles = []string{"kernel-tweaks.txt"}
+
 const CustomWarning = "Custom DTBs must be built specifically for andr36oid. DTBs from other custom firmwares are unlikely to work."
 
 func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir string, opts ...BootOptions) (string, error) {
 	var userdataGiB int
+	var keep map[string][]byte
 	if len(opts) > 0 {
 		userdataGiB = opts[0].UserdataGiB
+		keep = opts[0].Keep
 	}
 	src, e := os.Open(im.Path)
 	if e != nil {
@@ -103,7 +110,8 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 	if !bytes.Contains(script, []byte("ramdisk.uimg")) {
 		return "", errors.New("selected profile has no Treble boot script")
 	}
-	re := regexp.MustCompile(`(?m)^\s*load\s+mmc\s+\S+\s+\S+\s+([^\s]+\.dtb)\s*$`)
+	// "load mmc 1:1 ${fdt_addr_r} x.dtb", or since 2026-10-13 "if load ... x.dtb; then"
+	re := regexp.MustCompile(`(?m)^\s*(?:if\s+)?load\s+mmc\s+\S+\s+\S+\s+([^\s;]+\.dtb)\s*(?:;\s*then)?\s*$`)
 	m := re.FindSubmatch(script)
 	if len(m) != 2 {
 		return "", errors.New("cannot determine Android DTB destination")
@@ -172,6 +180,15 @@ func PrepareBoot(im *Image, profile string, noROMs, updating bool, custom, dir s
 		} else if _, e = ReadFile(fs, "/userdata-size.txt", 64); e == nil {
 			if e = fs.Remove("userdata-size.txt"); e != nil {
 				return "", e
+			}
+		}
+	}
+	if updating {
+		for _, name := range KeptFiles {
+			if b, ok := keep[name]; ok {
+				if e = write(name, b); e != nil {
+					return "", e
+				}
 			}
 		}
 	}

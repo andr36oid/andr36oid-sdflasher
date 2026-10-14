@@ -142,3 +142,40 @@ func TestProfileListedForV12(t *testing.T) {
 		t.Fatalf("the V12 console is called %q, alsoFor must use the same name", console)
 	}
 }
+
+// An update writes the user's Kernel Tweaks back; a fresh install starts without them.
+func TestPrepareBootKeepsKernelTweaks(t *testing.T) {
+	p := os.Getenv("SDFLASHER_TEST_IMAGE")
+	if p == "" {
+		t.Skip("set SDFLASHER_TEST_IMAGE for release-image integration")
+	}
+	im, e := Inspect(context.Background(), p, nil)
+	if e != nil {
+		t.Fatal(e)
+	}
+	tweaks := []byte("kt_args=panel_simple.extra_rates=30,144\n")
+	for _, update := range []bool{true, false} {
+		boot, e := PrepareBoot(im, im.Profiles[0].ID, false, update, "", t.TempDir(),
+			BootOptions{Keep: map[string][]byte{"kernel-tweaks.txt": tweaks}})
+		if e != nil {
+			t.Fatal(e)
+		}
+		f, e := os.Open(boot)
+		if e != nil {
+			t.Fatal(e)
+		}
+		st, _ := f.Stat()
+		fs, e := fat32.Read(file.New(f, true), st.Size(), 0, 512)
+		if e != nil {
+			t.Fatal(e)
+		}
+		b, e := ReadFile(fs, "/kernel-tweaks.txt", 4096)
+		f.Close()
+		if update && (e != nil || string(b) != string(tweaks)) {
+			t.Errorf("update: kernel-tweaks.txt is %q, %v", b, e)
+		}
+		if !update && e == nil {
+			t.Errorf("install kept kernel-tweaks.txt")
+		}
+	}
+}

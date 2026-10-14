@@ -41,6 +41,8 @@ type Plan struct {
 	UserdataGiB int `json:"userdata_gib,omitempty"`
 	// SystemImage is a prepared file written to system instead of the release's own.
 	SystemImage string `json:"system_image,omitempty"`
+	// Keep are the user's files on the old BOOT that an update writes again.
+	Keep map[string][]byte `json:"keep,omitempty"`
 }
 type Card struct {
 	Table       layout.Table `json:"table"`
@@ -50,6 +52,8 @@ type Card struct {
 	NoROMs      bool         `json:"no_roms"`
 	Fingerprint string       `json:"fingerprint"`
 	Reason      string       `json:"reason,omitempty"`
+	// Kept are the firmware.KeptFiles found on its BOOT.
+	Kept map[string][]byte `json:"kept,omitempty"`
 }
 
 func Snapshot(r io.ReaderAt, size int64) (string, error) {
@@ -152,6 +156,14 @@ func InspectCard(f io.ReaderAt, size int64) (Card, error) {
 			}
 		}
 	}
+	for _, name := range firmware.KeptFiles {
+		if b, e := firmware.ReadFile(boot, "/"+name, 64<<10); e == nil {
+			if c.Kept == nil {
+				c.Kept = map[string][]byte{}
+			}
+			c.Kept[name] = b
+		}
+	}
 	_, roms := t.Find("EASYROMS")
 	c.NoROMs = !roms
 	c.Table = t
@@ -198,6 +210,7 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 			return nil, fmt.Errorf("cannot update this card: %s", card.Reason)
 		}
 		p.NoROMs = card.NoROMs
+		p.Keep = card.Kept
 		if card.Table.GPT {
 			p.Table.ID = card.Table.ID
 		}

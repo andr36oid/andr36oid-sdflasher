@@ -17,6 +17,8 @@ type BootOptions struct {
 	ConvertDTB bool
 	// UserdataGiB is written to userdata-size.txt for the first-boot resizer (0: automatic).
 	UserdataGiB int
+	// Keep are files from the card's old BOOT written again on an update (KeptFiles).
+	Keep map[string][]byte
 }
 
 // BackupDir is the BOOT folder that keeps the user's original DTB, the
