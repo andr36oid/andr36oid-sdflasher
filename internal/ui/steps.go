@@ -212,6 +212,7 @@ func (s *screen) pagesFor(advanced fyne.CanvasObject) []*fyne.Container {
 			wrapped(s.t("The card is only read now. Nothing is written before the last step.")),
 			container.NewBorder(nil, nil, nil, s.refresh, s.driveSelect),
 			s.cardLabel,
+			s.allCheck,
 		),
 		container.NewVBox(
 			heading(s.t("Choose your console")),

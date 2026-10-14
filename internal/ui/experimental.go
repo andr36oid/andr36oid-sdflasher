@@ -14,6 +14,37 @@ import (
 // where problems with experimental device trees go, and only there
 const cloneTracker = "https://github.com/andr36oid/clone_issue_tracker"
 
+// agreeDialog asks before something risky: the warning in red, a checkbox, and an
+// "I agree" button that only works once the box is ticked. done gets the answer.
+func (s *screen) agreeDialog(title, warning, check string, done func(bool)) {
+	body := wrapped(warning)
+	body.Importance = widget.DangerImportance
+	box := widget.NewCheck(check, nil)
+	agree := widget.NewButton(s.t("I agree"), nil)
+	agree.Importance = widget.DangerImportance
+	agree.Disable()
+	cancel := widget.NewButton(s.t("Cancel"), nil)
+	d := dialog.NewCustomWithoutButtons(title, container.NewVScroll(container.NewVBox(body, widget.NewSeparator(), box)), s.win)
+	box.OnChanged = func(v bool) {
+		if v {
+			agree.Enable()
+		} else {
+			agree.Disable()
+		}
+	}
+	agree.OnTapped = func() {
+		d.Hide()
+		done(true)
+	}
+	cancel.OnTapped = func() {
+		d.Hide()
+		done(false)
+	}
+	d.SetButtons([]fyne.CanvasObject{cancel, agree})
+	d.Resize(fyne.NewSize(640, 520))
+	d.Show()
+}
+
 // confirmExperimental stands between choosing an experimental profile and using it:
 // a direct warning, a checkbox and an "I agree" button that only works once the box
 // is ticked. Asked once per profile while the app runs. done gets whether the

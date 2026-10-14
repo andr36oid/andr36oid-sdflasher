@@ -24,8 +24,12 @@ func diskInfo(args ...string) (map[string]any, error) {
 	e = json.Unmarshal(b, &v)
 	return v, e
 }
-func List() ([]Drive, error) {
-	v, e := diskInfo("list", "-plist", "external", "physical")
+func list(all bool) ([]Drive, error) {
+	args := []string{"list", "-plist", "external", "physical"}
+	if all {
+		args = []string{"list", "-plist", "physical"}
+	}
+	v, e := diskInfo(args...)
 	if e != nil {
 		return nil, e
 	}
@@ -79,14 +83,14 @@ func List() ([]Drive, error) {
 		internal, _ := inf["Internal"].(bool)
 		writable, _ := inf["Writable"].(bool)
 		whole, _ := inf["Whole"].(bool)
-		if internal || !writable || !whole {
+		if (internal && !all) || !writable || !whole {
 			continue
 		}
 		size, _ := inf["TotalSize"].(float64)
 		sec, _ := inf["DeviceBlockSize"].(float64)
 		name, _ := inf["MediaName"].(string)
 		serial, _ := inf["DiskUUID"].(string)
-		out = append(out, Drive{Path: "/dev/" + id, Name: name, Serial: serial, Size: int64(size), SectorSize: int64(sec)})
+		out = append(out, Drive{Path: "/dev/" + id, Name: name, Serial: serial, Size: int64(size), SectorSize: int64(sec), Fixed: internal})
 	}
 	return out, nil
 }

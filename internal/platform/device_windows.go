@@ -10,8 +10,13 @@ import (
 	"unsafe"
 )
 
-func List() ([]Drive, error) {
-	script := `$ErrorActionPreference='Stop'; $d=@(Get-Disk | Where-Object { -not $_.IsBoot -and -not $_.IsSystem -and -not $_.IsReadOnly -and $_.BusType -in @('USB','SD','MMC') } | ForEach-Object { $v=@(Get-Partition -DiskNumber $_.Number -ErrorAction SilentlyContinue | ForEach-Object { $_.AccessPaths | Where-Object { $_.StartsWith('\\?\Volume{') } | ForEach-Object { $_.TrimEnd('\') } }); @{ path=('\\.\PhysicalDrive'+$_.Number); name=$_.FriendlyName; serial=$_.SerialNumber; size=[long]$_.Size; sector_size=[long]$_.LogicalSectorSize; volumes=$v } }); ConvertTo-Json -InputObject $d -Compress -Depth 4`
+func list(all bool) ([]Drive, error) {
+	// fixed: any bus but USB, SD and MMC; only listed with all
+	removable := ` -and $_.BusType -in @('USB','SD','MMC')`
+	if all {
+		removable = ""
+	}
+	script := `$ErrorActionPreference='Stop'; $d=@(Get-Disk | Where-Object { -not $_.IsBoot -and -not $_.IsSystem -and -not $_.IsReadOnly -and $_.Size -ge 1GB` + removable + ` } | ForEach-Object { $v=@(Get-Partition -DiskNumber $_.Number -ErrorAction SilentlyContinue | ForEach-Object { $_.AccessPaths | Where-Object { $_.StartsWith('\\?\Volume{') } | ForEach-Object { $_.TrimEnd('\') } }); @{ path=('\\.\PhysicalDrive'+$_.Number); name=$_.FriendlyName; serial=$_.SerialNumber; size=[long]$_.Size; sector_size=[long]$_.LogicalSectorSize; volumes=$v; fixed=($_.BusType -notin @('USB','SD','MMC')) } }); ConvertTo-Json -InputObject $d -Compress -Depth 4`
 	cmd := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script)
 	hide(cmd)
 	b, e := cmd.Output()

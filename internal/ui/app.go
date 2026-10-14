@@ -43,6 +43,8 @@ type screen struct {
 	system                              string // a different system image (GSI), "" for andr36oid's
 	systemAccepted                      bool
 	experimentalOK                      map[string]bool // experimental profiles whose warning was agreed to
+	allDrives                           bool            // advanced: fixed disks are listed too
+	allCheck                            *widget.Check
 	systemLabel                         *widget.Label
 	busy                                bool
 	releaseLabel, cardLabel, help       *widget.Label
@@ -166,6 +168,9 @@ func (s *screen) build() {
 		s.ready()
 	})
 	s.profileSelect.PlaceHolder = s.t("Choose your board and screen")
+	s.allCheck = widget.NewCheck(s.t("Show all drives (advanced)"), nil)
+	s.allCheck.SetChecked(s.allDrives)
+	s.allCheck.OnChanged = s.setAllDrives
 	s.driveSelect = widget.NewSelect(nil, nil)
 	s.driveSelect.PlaceHolder = s.t("Select a microSD card")
 	s.noROMs = widget.NewCheck(s.t("Use all available storage for Android"), func(bool) { s.ready() })
@@ -414,10 +419,41 @@ func (s *screen) populateImage() {
 	s.console.SetOptions(opts)
 	s.console.ClearSelected()
 }
+
+// driveLabel is a drive as the list shows it: fixed disks are marked
+func (s *screen) driveLabel(d platform.Drive) string {
+	if d.Fixed {
+		return s.t("Not a removable card") + ": " + d.Label()
+	}
+	return d.Label()
+}
+
+// setAllDrives switches listing fixed disks on (after the warning) or off.
+func (s *screen) setAllDrives(on bool) {
+	if !on {
+		s.allDrives = false
+		s.listDrives()
+		return
+	}
+	if s.allDrives {
+		return
+	}
+	s.agreeDialog(s.t("Show all drives?"), s.t("This also lists hard drives, SSDs and other disks that are not a USB card reader or an SD slot. Pick the wrong one and everything on it is gone for good: your files, other operating systems, backups.\n\nThe disk your computer runs from is never listed, but every other disk is. andr36oid only supports microSD cards, so nobody can help with a disk written this way.\n\nUse this only if you know exactly which disk is your card, for example a card reader that shows up as an internal disk."), s.t("I understand that choosing the wrong disk erases it, and that this is unsupported."), func(ok bool) {
+		s.allDrives = ok
+		if !ok {
+			s.allCheck.OnChanged = nil
+			s.allCheck.SetChecked(false)
+			s.allCheck.OnChanged = s.setAllDrives
+			return
+		}
+		s.listDrives()
+	})
+}
+
 func (s *screen) populateDrives(reset bool) {
 	var opts []string
 	for _, d := range s.drives {
-		opts = append(opts, d.Label())
+		opts = append(opts, s.driveLabel(d))
 	}
 	s.driveSelect.OnChanged = nil
 	s.driveSelect.SetOptions(opts)
@@ -426,11 +462,11 @@ func (s *screen) populateDrives(reset bool) {
 		s.drive = nil
 		s.card = nil
 	} else if s.drive != nil {
-		s.driveSelect.SetSelected(s.drive.Label())
+		s.driveSelect.SetSelected(s.driveLabel(*s.drive))
 	}
 	s.driveSelect.OnChanged = func(label string) {
 		for _, d := range s.drives {
-			if d.Label() == label {
+			if s.driveLabel(d) == label {
 				s.inspectDrive(d)
 				break
 			}
@@ -458,7 +494,11 @@ func (s *screen) cardDescription() {
 func (s *screen) listDrives() {
 	s.refresh.Disable()
 	go func() {
-		ds, e := platform.List()
+		list := platform.List
+		if s.allDrives {
+			list = platform.ListAll
+		}
+		ds, e := list()
 		fyne.Do(func() {
 			s.refresh.Enable()
 			if e != nil {
@@ -605,6 +645,15 @@ func (s *screen) confirm() {
 		msg += "\n\n" + s.t(ownDTBWarning)
 	} else if s.custom != "" {
 		msg += "\n\n" + s.t(firmware.CustomWarning)
+	}
+	// a fixed disk: the plain question isn't enough
+	if s.drive.Fixed {
+		s.agreeDialog(s.t("Write to a disk that is not a removable card?"), s.t("%s is not a removable card. If it is the wrong disk, what is on it is destroyed and cannot be recovered. Check the name and the size once more before you go on.", s.drive.Label())+"\n\n"+msg, s.t("This is the right disk. Write to it."), func(ok bool) {
+			if ok {
+				s.write(p)
+			}
+		})
+		return
 	}
 	s.confirmDialog(title, msg, func(ok bool) {
 		if ok {

@@ -13,7 +13,17 @@ type Drive struct {
 	Size       int64    `json:"size"`
 	SectorSize int64    `json:"sector_size"`
 	Volumes    []string `json:"volumes,omitempty"`
+	// Fixed: not a USB or SD/MMC card reader. Only ListAll shows these, and only
+	// for advanced users; the disk the computer runs from is never listed.
+	Fixed bool `json:"fixed,omitempty"`
 }
+
+// List returns the removable cards: USB card readers and SD/MMC slots.
+func List() ([]Drive, error) { return list(false) }
+
+// ListAll also returns fixed disks (hard drives, SSDs, internal readers that show
+// up as one), still never the system or boot disk, a read-only one or one under 1 GiB.
+func ListAll() ([]Drive, error) { return list(true) }
 
 func (d Drive) Label() string {
 	return fmt.Sprintf("%s · %.1f GB · %s", d.Name, float64(d.Size)/1e9, d.Path)
@@ -46,7 +56,7 @@ func difference(a, b Drive) string {
 }
 
 func Revalidate(want Drive) (Drive, error) {
-	ds, e := List()
+	ds, e := list(want.Fixed)
 	if e != nil {
 		return Drive{}, e
 	}

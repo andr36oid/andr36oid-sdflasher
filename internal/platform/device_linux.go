@@ -2,6 +2,7 @@ package platform
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"golang.org/x/sys/unix"
 	"os"
@@ -16,12 +17,13 @@ type block struct {
 	RM                                    bool
 	RO                                    bool
 	Sector                                int64     `json:"log-sec"`
+	FSTypeJSON                            *string   `json:"fstype"`
 	Mounts                                []*string `json:"mountpoints"`
 	Children                              []block
 }
 
 func blocks() ([]block, error) {
-	b, e := hostCommand("lsblk", "--bytes", "--json", "--output", "NAME,PATH,TYPE,SIZE,MODEL,SERIAL,RM,TRAN,MOUNTPOINTS,LOG-SEC,RO").Output()
+	b, e := hostCommand("lsblk", "--bytes", "--json", "--output", "NAME,PATH,TYPE,SIZE,MODEL,SERIAL,RM,TRAN,MOUNTPOINTS,LOG-SEC,RO,FSTYPE").Output()
 	if e != nil {
 		return nil, e
 	}
@@ -46,17 +48,69 @@ func critical(b block) bool {
 	}
 	return false
 }
-func List() ([]Drive, error) {
+
+// members: filesystem types that mean the disk belongs to something running,
+// though nothing on it shows a mount point
+var members = map[string]bool{"zfs_member": true, "LVM2_member": true, "linux_raid_member": true, "crypto_LUKS": true, "bcache": true, "swap": true, "ddf_raid_member": true, "isw_raid_member": true, "ceph_bluestore": true}
+
+// inUse: something on the disk is mounted, belongs to ZFS, LVM, RAID, LUKS or
+// bcache, is swap, or has device-mapper or RAID devices on top. Only fixed disks
+// are checked this way: they are never safe to offer when any of that is true.
+func inUse(b block) bool {
+	for _, m := range b.Mounts {
+		if m != nil && *m != "" {
+			return true
+		}
+	}
+	if b.FSTypeJSON != nil && members[*b.FSTypeJSON] {
+		return true
+	}
+	for _, c := range b.Children {
+		if c.Type != "part" || inUse(c) {
+			return true
+		}
+	}
+	return false
+}
+
+// claimed: as root, the kernel refuses an exclusive open of a disk that a mount,
+// ZFS, RAID, LVM or LUKS holds, also where lsblk can't name the filesystem
+// (no udev). Unprivileged it can't tell, and the write's own exclusive open is the
+// last guard.
+func claimed(b block) bool {
+	if os.Geteuid() != 0 {
+		return false
+	}
+	f, e := os.OpenFile(b.Path, os.O_RDONLY|unix.O_EXCL, 0)
+	if e != nil {
+		return errors.Is(e, unix.EBUSY)
+	}
+	f.Close()
+	return false
+}
+
+// virtual block devices that are other machines' disks: ZFS volumes, network block devices
+func virtual(b block) bool {
+	for _, p := range []string{"zd", "nbd", "rbd", "drbd"} {
+		if strings.HasPrefix(b.Name, p) {
+			return true
+		}
+	}
+	return false
+}
+
+func list(all bool) ([]Drive, error) {
 	bs, e := blocks()
 	if e != nil {
 		return nil, e
 	}
 	var out []Drive
 	for _, b := range bs {
-		if b.Type != "disk" || b.RO || (!b.RM && b.Tran != "usb") || critical(b) || b.Size < 1<<30 {
+		fixed := !b.RM && b.Tran != "usb"
+		if b.Type != "disk" || b.RO || (fixed && (!all || inUse(b) || virtual(b) || claimed(b))) || critical(b) || b.Size < 1<<30 {
 			continue
 		}
-		d := Drive{Path: b.Path, Name: strings.TrimSpace(b.Model), Serial: strings.TrimSpace(b.Serial), Size: b.Size, SectorSize: b.Sector}
+		d := Drive{Path: b.Path, Name: strings.TrimSpace(b.Model), Serial: strings.TrimSpace(b.Serial), Size: b.Size, SectorSize: b.Sector, Fixed: fixed}
 		if d.Name == "" {
 			d.Name = b.Name
 		}
