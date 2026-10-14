@@ -75,8 +75,14 @@ func TestUpdatePreservesUserDataGamesAndMetadata(t *testing.T) {
 	}
 	u, _ := tab.Find("userdata")
 	old, _ := card.Table.Find("userdata")
-	if u != old {
+	if u.Start != old.Start || u.End != old.End || u.ID != old.ID || u.Type != old.Type || u.Name != old.Name {
 		t.Fatal("userdata geometry or identity changed")
+	}
+	for _, q := range tab.Parts {
+		hidden := q.Flags&layout.NoDriveLetter != 0
+		if hidden == (q.Name == "BOOT" || q.Name == "EASYROMS") {
+			t.Fatalf("%s: drive letter flag %v", q.Name, hidden)
+		}
 	}
 }
 
