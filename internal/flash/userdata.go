@@ -1,7 +1,8 @@
 package flash
 
-// The first-boot resizer on the card (Image-resizing, linuxrc in
-// device/gameconsole/common) creates userdata and EASYROMS. UserdataLayout
+// The first-boot resizer on the card creates userdata and EASYROMS: since rc1.3
+// Android's first start (firstresize/andr36oid-firstresize.sh in
+// device/gameconsole/common), before that a second kernel (Image-resizing, linuxrc). UserdataLayout
 // repeats its rule so the flasher can show what will happen; keep the two in step.
 
 const (

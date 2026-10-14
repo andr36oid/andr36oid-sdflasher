@@ -161,11 +161,13 @@ func Inspect(ctx context.Context, p string, progress func(int64, int64)) (*Image
 	if crc32.ChecksumIEEE(rdHeader) != rdCRC || rdSize != len(rd)-64 || crc32.ChecksumIEEE(rd[64:]) != binary.BigEndian.Uint32(rd[24:]) {
 		return nil, errors.New("ramdisk checksum mismatch")
 	}
-	for _, name := range []string{"Image", "Image-resizing"} {
-		b, e := ReadFile(boot, "/"+name, 128<<20)
-		if e != nil || len(b) < 4096 {
-			return nil, fmt.Errorf("missing or truncated %s", name)
-		}
+	if b, e := ReadFile(boot, "/Image", 128<<20); e != nil || len(b) < 4096 {
+		return nil, errors.New("missing or truncated Image")
+	}
+	// Images up to rc1.2 resize the card with a second kernel; since rc1.3
+	// Android does it on the first start and the image has no Image-resizing.
+	if b, e := ReadFile(boot, "/Image-resizing", 128<<20); e == nil && len(b) < 4096 {
+		return nil, errors.New("truncated Image-resizing")
 	}
 	vendor, _ := t.Find("vendor")
 	vfs, e := extfs.Open(f, vendor.Offset(), vendor.Size())
