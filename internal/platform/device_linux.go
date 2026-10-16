@@ -89,6 +89,17 @@ func claimed(b block) bool {
 	return false
 }
 
+// sdSlot: an SD card in a built-in reader (PCIe readers such as Realtek's rtsx,
+// laptop and SBC slots). The kernel calls those cards not removable, but the card
+// type is SD; built-in eMMC storage is MMC.
+func sdSlot(b block) bool {
+	if b.Tran != "mmc" {
+		return false
+	}
+	t, e := os.ReadFile("/sys/block/" + b.Name + "/device/type")
+	return e == nil && strings.TrimSpace(string(t)) == "SD"
+}
+
 // virtual block devices that are other machines' disks: ZFS volumes, network block devices
 func virtual(b block) bool {
 	for _, p := range []string{"zd", "nbd", "rbd", "drbd"} {
@@ -106,7 +117,7 @@ func list(all bool) ([]Drive, error) {
 	}
 	var out []Drive
 	for _, b := range bs {
-		fixed := !b.RM && b.Tran != "usb"
+		fixed := !b.RM && b.Tran != "usb" && !sdSlot(b)
 		if b.Type != "disk" || b.RO || (fixed && (!all || inUse(b) || virtual(b) || claimed(b))) || critical(b) || b.Size < 1<<30 {
 			continue
 		}
