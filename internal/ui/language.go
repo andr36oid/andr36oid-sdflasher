@@ -3,10 +3,12 @@ package ui
 import (
 	"embed"
 	"encoding/json"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/lang"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/i18n"
 )
@@ -68,10 +70,45 @@ func (s *screen) localizeDialogs() {
 	_ = lang.AddTranslationsForLocale(data, lang.SystemLocale())
 }
 func (s *screen) info(title, message string, parent fyne.Window) {
-	dialog.ShowCustom(title, s.t("OK"), wrapped(message), parent)
+	d := dialog.NewCustom(title, s.t("OK"), wrapped(message), parent)
+	fitDialog(d, message, parent)
+	d.Show()
 }
 func (s *screen) confirmDialog(title, message string, callback func(bool), parent fyne.Window) {
-	dialog.ShowCustomConfirm(title, s.t("Continue"), s.t("Cancel"), wrapped(message), callback, parent)
+	d := dialog.NewCustomConfirm(title, s.t("Continue"), s.t("Cancel"), wrapped(message), callback, parent)
+	fitDialog(d, message, parent)
+	d.Show()
+}
+
+// fitDialog gives a dialog with a word-wrapped message a readable width; on its
+// own a wrapped label asks for almost none, and the text ends up a few words per
+// line. The height fits the message wrapped at that width.
+func fitDialog(d dialog.Dialog, message string, parent fyne.Window) {
+	w := float32(520)
+	if pw := parent.Canvas().Size().Width - 4*theme.Padding(); pw < w {
+		w = pw
+	}
+	text := w - 6*theme.Padding()
+	line := fyne.MeasureText("M", theme.TextSize(), fyne.TextStyle{}).Height + theme.LineSpacing()
+	lines := float32(0)
+	for _, p := range strings.Split(message, "\n") {
+		n := float32(1)
+		cur := float32(0)
+		for _, word := range strings.Fields(p) {
+			ww := fyne.MeasureText(word+" ", theme.TextSize(), fyne.TextStyle{}).Width
+			if cur > 0 && cur+ww > text {
+				n++
+				cur = 0
+			}
+			cur += ww
+		}
+		lines += n
+	}
+	h := lines*line + 12*theme.Padding() + theme.InputBorderSize()
+	if ph := parent.Canvas().Size().Height - 4*theme.Padding(); h > ph {
+		h = ph
+	}
+	d.Resize(fyne.NewSize(w, h))
 }
 func (s *screen) showError(err error) {
 	s.info(s.t("Operation could not finish"), s.t("Check the selected image and card, then try again.")+"\n\n"+s.t("Technical details")+":\n"+err.Error(), s.win)

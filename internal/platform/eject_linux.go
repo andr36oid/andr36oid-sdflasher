@@ -4,28 +4,33 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"golang.org/x/sys/unix"
 )
 
-// Eject unmounts the card's volumes and powers the reader's card down
-// (udisksctl, as the desktop's own eject does), or runs eject without udisks.
+// Eject unmounts the card's volumes and writes out everything still cached, so
+// the card can be pulled. A USB reader is then powered down too, as the
+// desktop's own eject does; built-in readers (PCIe ones such as Realtek's) can't
+// be, and that's fine: the card is safe to remove once it's unmounted and synced.
 func Eject(d Drive) error {
 	d, e := Revalidate(d)
 	if e != nil {
 		return e
 	}
-	if _, e := exec.LookPath("udisksctl"); e != nil {
-		if b, e := exec.Command("eject", d.Path).CombinedOutput(); e != nil {
-			return fmt.Errorf("eject %s: %s", d.Path, strings.TrimSpace(string(b)))
-		}
-		return nil
-	}
+	_, e = exec.LookPath("udisksctl")
+	udisks := e == nil
 	for _, v := range d.Volumes {
-		if b, e := exec.Command("udisksctl", "unmount", "--no-user-interaction", "-b", v).CombinedOutput(); e != nil {
+		c := exec.Command("umount", v)
+		if udisks {
+			c = exec.Command("udisksctl", "unmount", "--no-user-interaction", "-b", v)
+		}
+		if b, e := c.CombinedOutput(); e != nil {
 			return fmt.Errorf("cannot unmount %s: %s", v, strings.TrimSpace(string(b)))
 		}
 	}
-	if b, e := exec.Command("udisksctl", "power-off", "--no-user-interaction", "-b", d.Path).CombinedOutput(); e != nil {
-		return fmt.Errorf("cannot eject %s: %s", d.Path, strings.TrimSpace(string(b)))
+	unix.Sync()
+	if udisks {
+		exec.Command("udisksctl", "power-off", "--no-user-interaction", "-b", d.Path).Run()
 	}
 	return nil
 }
