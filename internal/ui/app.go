@@ -191,6 +191,9 @@ func (s *screen) build() {
 		} else {
 			s.noROMs.Enable()
 			s.modeHelp.SetText(s.t("Everything currently on this card will be erased."))
+			if s.tooSmall() {
+				s.modeHelp.SetText(s.tooSmallText())
+			}
 			s.modeHelp.Importance = widget.DangerImportance
 		}
 		s.modeHelp.Refresh()
@@ -258,7 +261,7 @@ func (s *screen) ready() {
 	if s.action == nil {
 		return
 	}
-	if !s.busy && s.im != nil && s.drive != nil && s.card != nil && s.profile != "" && !(s.updating && !s.card.Installed) {
+	if !s.busy && s.im != nil && s.drive != nil && s.card != nil && s.profile != "" && !(s.updating && !s.card.Installed) && !s.tooSmall() {
 		s.action.Enable()
 	} else {
 		s.action.Disable()
@@ -477,8 +480,20 @@ func (s *screen) populateDrives(reset bool) {
 	}
 	s.ready()
 }
+
+// tooSmall: a new installation on a card under flash.MinCardBytes
+func (s *screen) tooSmall() bool {
+	return !s.updating && s.drive != nil && flash.TooSmall(s.drive.Size) != nil
+}
+func (s *screen) tooSmallText() string {
+	return s.t("This card is too small. andr36oid needs a card of at least 16 GB; this one has %.1f GB.", float64(s.drive.Size)/1e9)
+}
 func (s *screen) cardDescription() {
 	if s.card == nil {
+		return
+	}
+	if !s.card.Installed && s.drive != nil && flash.TooSmall(s.drive.Size) != nil {
+		s.cardLabel.SetText(s.tooSmallText())
 		return
 	}
 	if s.card.Installed {
@@ -683,8 +698,29 @@ func (s *screen) write(p *flash.Plan) {
 	})
 	back.Disable()
 	back.Importance = widget.HighImportance
+	// after a new installation: the card stays mounted for AUTOAPK until this
+	drive := *s.drive
+	var eject *widget.Button
+	eject = widget.NewButton(s.t("Eject card"), func() {
+		eject.Disable()
+		go func() {
+			e := platform.Eject(drive)
+			fyne.Do(func() {
+				if e != nil {
+					eject.Enable()
+					details.SetText(s.t("Safely eject the card and insert it into the console’s system card slot. The first boot prepares storage and restarts the console. Keep it powered on until Android setup appears. If the screen stays blank, check the chosen board and panel profile."))
+					s.info(s.t("Eject card"), s.t("The card could not be ejected. Eject it with your computer’s own eject, then insert it into the console’s system card slot.")+"\n\n"+s.t("Technical details")+": "+e.Error(), s.win)
+					return
+				}
+				eject.Hide()
+				details.SetText(s.t("The card is ejected. Insert it into the console’s system card slot. The first boot prepares storage and restarts the console. Keep it powered on until Android setup appears. If the screen stays blank, check the chosen board and panel profile."))
+			})
+		}()
+	})
+	eject.Importance = widget.HighImportance
+	eject.Hide()
 	s.win.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(title, widget.NewLabel(s.drive.Label()), widget.NewSeparator()), back, nil, nil,
-		container.NewVScroll(container.NewVBox(phase, bar, outcome, m.img, legend(s.locale), details)))))
+		container.NewVScroll(container.NewVBox(phase, bar, outcome, m.img, legend(s.locale), details, eject)))))
 	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, UserdataGiB: p.UserdataGiB, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert, SystemImage: s.system, SystemAccepted: s.systemAccepted}
 	var speed *flash.CardSpeed
 	go func() {
@@ -727,7 +763,8 @@ func (s *screen) write(p *flash.Plan) {
 				outcome.Show()
 			}
 			if p.Mode == "install" {
-				details.SetText(s.t("Safely eject the card and insert it into the console’s system card slot. The first boot prepares storage and restarts the console. Keep it powered on until Android setup appears. If the screen stays blank, check the chosen board and panel profile."))
+				details.SetText(s.t("Want to add your own apps? Copy APK files to the AUTOAPK drive now, and the console offers them during setup. This only works before the console is set up: its first start moves AUTOAPK, and once the apps are installed, the space goes to Android."))
+				eject.Show()
 			} else {
 				details.SetText(s.t("Your card has been written and verified. Apps, settings, saves, and games were preserved.") + "\n" + s.t("Recovery backups") + ": " + result.Backup)
 			}

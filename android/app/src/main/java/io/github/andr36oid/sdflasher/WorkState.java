@@ -28,6 +28,8 @@ final class WorkState {
       custom = "",
       error = "",
       message = "",
+      // shown under message when the work is done (the AUTOAPK note after an install)
+      note = "",
       result = "";
   static volatile boolean customAccepted = false, update = false, noROMs = false, busy = false;
   // Android size for a new card in GiB, 0: the recommended size
@@ -107,6 +109,7 @@ final class WorkState {
     busy = true;
     error = "";
     message = "Working…";
+    note = "";
     result = "";
     progress = null;
     plan = null;

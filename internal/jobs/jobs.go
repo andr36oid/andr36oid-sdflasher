@@ -134,6 +134,8 @@ func Worker(job string) error {
 		if e != nil {
 			return e
 		}
+		// a new card stays mounted for adding APKs to AUTOAPK; the app ejects it
+		h.Remount = req.Mode == "install"
 		defer h.Close()
 		card, e := flash.InspectCard(h.File, d.Size)
 		if e != nil {

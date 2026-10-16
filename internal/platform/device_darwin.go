@@ -112,9 +112,16 @@ func Open(d Drive, write bool) (*Handle, error) {
 	if e != nil {
 		return nil, e
 	}
-	return &Handle{File: f, Cleanup: func() {
-		if write {
+	h := &Handle{File: f}
+	h.Cleanup = func() {
+		if !write {
+			return
+		}
+		if h.Remount {
+			exec.Command("/usr/sbin/diskutil", "mountDisk", d.Path).Run()
+		} else {
 			exec.Command("/usr/sbin/diskutil", "eject", d.Path).Run()
 		}
-	}}, nil
+	}
+	return h, nil
 }

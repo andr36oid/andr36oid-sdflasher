@@ -83,6 +83,11 @@ func TestStepsNeedWhatComesBefore(t *testing.T) {
 		t.Fatal("update of a card without andr36oid must not be writable")
 	}
 	s.mode.SetSelected(s.t("Install a new card (erase)"))
+	if !s.action.Disabled() {
+		t.Fatal("a new install on an 8 GB card must not be writable")
+	}
+	s.drive = &platform.Drive{Path: "x", Size: 16e9}
+	s.ready()
 	if s.action.Disabled() || s.stepButtons[stepWrite].Disabled() {
 		t.Fatal("new install with everything chosen must be writable")
 	}

@@ -171,6 +171,7 @@ func InspectCard(f io.ReaderAt, size int64) (Card, error) {
 	_, c.Treble = t.Find("vendor")
 	return c, nil
 }
+
 // MinCardBytes is the smallest card a new installation takes: every "16 GB" card
 // (15.5 to 16 GB real), not an 8 GB one. The image with its AUTOAPK partition is
 // about 5 GB and Android needs room on top for the apps the setup installs.

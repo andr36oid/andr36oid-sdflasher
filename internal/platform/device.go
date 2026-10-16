@@ -78,6 +78,10 @@ func Revalidate(want Drive) (Drive, error) {
 type Handle struct {
 	File    *os.File
 	Cleanup func()
+	// Remount: after writing, the computer mounts the card again instead of
+	// ejecting it (macOS ejects otherwise), so people can copy their own APKs to
+	// AUTOAPK. Windows and Linux mount it again by themselves.
+	Remount bool
 }
 
 func (h *Handle) Close() {

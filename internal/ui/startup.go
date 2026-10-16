@@ -37,7 +37,7 @@ func (s *screen) showCardAdvice() {
 		"Android is much heavier on storage than ArkOS and similar Linux firmware. Use a high-quality, fast microSD card for a smooth experience.",
 		"Low-quality cards can fail early, behave unpredictably, cause crashes, or corrupt data.",
 		"We don’t recommend specific brands: a brand label doesn’t prove a card is genuine. Buy quality storage from reputable sellers.",
-		"8 GB is the minimum. For Android, we recommend at least 32 GB. 128 GB is the sweet spot for Android and EASYROMS to fit comfortably. Smaller cards can work if they meet the 8 GB minimum.",
+		"16 GB is the minimum. For Android, we recommend at least 32 GB. 128 GB is the sweet spot for Android and EASYROMS to fit comfortably.",
 	} {
 		body.Add(wrapped(s.t(key)))
 		body.Add(widget.NewSeparator())

@@ -211,9 +211,8 @@ public final class MainActivity extends Activity {
           "Low-quality cards can fail early, behave unpredictably, cause crashes, or corrupt data.",
           "We don’t recommend specific brands: a brand label doesn’t prove a card is genuine. Buy"
               + " quality storage from reputable sellers.",
-          "8 GB is the minimum. For Android, we recommend at least 32 GB. 128 GB is the sweet spot"
-              + " for Android and EASYROMS to fit comfortably. Smaller cards can work if they meet"
-              + " the 8 GB minimum."
+          "16 GB is the minimum. For Android, we recommend at least 32 GB. 128 GB is the sweet"
+              + " spot for Android and EASYROMS to fit comfortably."
         }) label(t(key), false);
     button(
         "I understand",
@@ -476,6 +475,18 @@ public final class MainActivity extends Activity {
     WorkState.revision++;
   }
 
+  // a card under the minimum for a new installation (Mobile.minCardBytes)
+  private boolean tooSmall() {
+    UsbCard c = WorkState.selected;
+    return c != null && c.bytes > 0 && c.bytes < Mobile.minCardBytes();
+  }
+
+  private String tooSmallText() {
+    return t(
+        "This card is too small. andr36oid needs a card of at least 16 GB; this one has %.1f GB.",
+        WorkState.selected.bytes / 1e9);
+  }
+
   private boolean stepDone(int step) {
     switch (step) {
       case 0:
@@ -546,12 +557,14 @@ public final class MainActivity extends Activity {
     cardLabel.setText(
         WorkState.card == null
             ? t("Insert a microSD card, then select it below.")
-            : installed
-                ? t(
-                    WorkState.card.optBoolean("treble")
-                        ? "Treble installation"
-                        : "Legacy andr36oid — will migrate to Treble")
-                : t("New installation required"));
+            : !installed && tooSmall()
+                ? tooSmallText()
+                : installed
+                    ? t(
+                        WorkState.card.optBoolean("treble")
+                            ? "Treble installation"
+                            : "Legacy andr36oid — will migrate to Treble")
+                    : t("New installation required"));
     install.setChecked(!WorkState.update);
     update.setChecked(WorkState.update);
     update.setEnabled(!busy && installed);
@@ -561,7 +574,7 @@ public final class MainActivity extends Activity {
     systemLabel.setText(systemText());
     boolean ready = true;
     for (int n = 0; n < 4; n++) ready &= stepDone(n);
-    action.setEnabled(!busy && ready);
+    action.setEnabled(!busy && ready && !(!WorkState.update && tooSmall()));
     // a step that lost what it needs (card removed, new image) sends the user back
     while (WorkState.step > 0 && !reachable(WorkState.step)) WorkState.step--;
     int step = WorkState.step;
@@ -662,7 +675,10 @@ public final class MainActivity extends Activity {
       lastResult = WorkState.result;
       new AlertDialog.Builder(this)
           .setTitle(t("Written and verified"))
-          .setMessage(t(WorkState.message) + speedText())
+          .setMessage(
+              t(WorkState.message)
+                  + (WorkState.note.isEmpty() ? "" : "\n\n" + t(WorkState.note))
+                  + speedText())
           .setPositiveButton(t("OK"), null)
           .show();
     }
@@ -1165,6 +1181,12 @@ public final class MainActivity extends Activity {
                               : "Your card has been written and verified. Insert it into the"
                                   + " console and keep it powered on until Android setup"
                                   + " appears.";
+                      WorkState.note =
+                          updating
+                              ? ""
+                              : "Want to add your own apps? Before the first start, connect the"
+                                  + " card to a computer and copy APK files to its AUTOAPK drive."
+                                  + " The console offers them during setup.";
                       WorkState.card = null;
                     }
                   });

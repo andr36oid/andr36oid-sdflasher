@@ -407,4 +407,7 @@ func TooOldImage(name string) string {
 	return date
 }
 func Translate(locale, key string) string { return i18n.Text(locale, key) }
-func ResolveLocale(locale string) string  { return i18n.Resolve(locale) }
+
+// MinCardBytes is the smallest card a new installation takes (flash.MinCardBytes).
+func MinCardBytes() int64                { return flash.MinCardBytes }
+func ResolveLocale(locale string) string { return i18n.Resolve(locale) }
