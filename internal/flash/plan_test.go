@@ -13,6 +13,11 @@ import (
 
 func sample(t *testing.T) (*firmware.Image, Card, *os.File, string) {
 	t.Helper()
+	// the fixtures are tiny cards; TestInstallSizesFollowTheResizer and
+	// TestInstallRefusesSmallCards check the real minimum
+	min := MinCardBytes
+	MinCardBytes = 0
+	t.Cleanup(func() { MinCardBytes = min })
 	size := int64(8 << 20)
 	path := filepath.Join(t.TempDir(), "source.img")
 	raw := bytes.Repeat([]byte{0x5a}, int(size))
@@ -178,6 +183,7 @@ func TestWriteGuardRejectsWritesOutsidePlan(t *testing.T) {
 }
 func TestInstallSizesFollowTheResizer(t *testing.T) {
 	im, card, _, _ := sample(t)
+	MinCardBytes = 14e9
 	const g = int64(1000 * 1000 * 1000)
 	cases := []struct {
 		size   int64
@@ -186,9 +192,9 @@ func TestInstallSizesFollowTheResizer(t *testing.T) {
 		ok     bool
 	}{
 		{16 * g, false, 0, true},   // automatic: the whole card goes to Android
-		{8 * g, false, 0, true},    // the same
+		{8 * g, false, 0, false},   // too small for a new installation
 		{16 * g, false, 16, false}, // a chosen size that leaves no games partition
-		{8 * g, true, 0, true},     // all for Android
+		{16 * g, true, 0, true},    // all for Android
 		{64 * g, false, 32, true},  // chosen size
 		{64 * g, false, 100, false},
 		{64 * g, true, 32, true}, // size ignored with all for Android
@@ -254,5 +260,107 @@ func TestSystemImageReplacesOnlySystem(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestInstallRefusesSmallCards(t *testing.T) {
+	im, card, _, _ := sample(t)
+	MinCardBytes = 14e9
+	for _, c := range []struct {
+		size int64
+		ok   bool
+	}{{7_900_000_000, false}, {13_999_999_488, false}, {15_523_119_104, true}, {64e9, true}} {
+		_, e := Build(im, card, c.size, "install", "Panels/Panel4", false, 0)
+		if (e == nil) != c.ok {
+			t.Errorf("%d bytes: %v", c.size, e)
+		}
+		if (TooSmall(c.size) == nil) != c.ok {
+			t.Errorf("TooSmall(%d) disagrees", c.size)
+		}
+	}
+	// an installed card is updated whatever its size
+	if _, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0); e != nil {
+		t.Fatal(e)
+	}
+}
+
+// withAutoAPK adds the image's AUTOAPK (p12) where the fixtures' installed card
+// has its userdata, as in the real image.
+func withAutoAPK(im *firmware.Image) {
+	im.Table.Parts = append(im.Table.Parts, layout.Partition{Number: 12, Name: AutoAPK, Start: 8192, End: 8192 + 2047, Type: layout.LinuxType, ID: layout.GUID()})
+}
+
+func TestInstallKeepsAutoAPKWithADriveLetter(t *testing.T) {
+	im, card, _, _ := sample(t)
+	withAutoAPK(im)
+	p, e := Build(im, card, card.Table.Size, "install", "Panels/Panel4", false, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	q, ok := p.Table.Find(AutoAPK)
+	if !ok || q.Number != 12 {
+		t.Fatalf("AUTOAPK not in the new table: %+v", q)
+	}
+	if q.Flags&layout.NoDriveLetter != 0 {
+		t.Error("AUTOAPK gets no drive letter")
+	}
+	if s, _ := p.Table.Find("system"); s.Flags&layout.NoDriveLetter == 0 {
+		t.Error("system gets a drive letter")
+	}
+}
+
+func TestUpdateLeavesTheImagesAutoAPKOut(t *testing.T) {
+	im, card, dst, boot := sample(t)
+	withAutoAPK(im)
+	p, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, ok := p.Table.Find(AutoAPK); ok {
+		t.Fatal("the image's AUTOAPK is in an update's table")
+	}
+	for _, w := range p.Writes {
+		if w.Name == AutoAPK {
+			t.Fatal("an update writes AUTOAPK")
+		}
+	}
+	u, _ := card.Table.Find("userdata")
+	before := make([]byte, u.Size())
+	dst.ReadAt(before, u.Offset())
+	if e = Execute(context.Background(), dst, im, p, boot, t.TempDir(), nil); e != nil {
+		t.Fatal(e)
+	}
+	after := make([]byte, u.Size())
+	dst.ReadAt(after, u.Offset())
+	if !bytes.Equal(before, after) {
+		t.Fatal("userdata changed")
+	}
+}
+
+func TestUpdateKeepsTheCardsAutoAPK(t *testing.T) {
+	im, card, _, _ := sample(t)
+	withAutoAPK(im)
+	// between the first and the second start: AUTOAPK (p13) behind userdata
+	for i, q := range card.Table.Parts {
+		if q.Name == "userdata" {
+			card.Table.Parts[i].End = 12287
+		}
+	}
+	moved := layout.Partition{Number: 13, Name: AutoAPK, Start: 12288, End: 16383, Type: layout.LinuxType, ID: layout.GUID()}
+	card.Table.Parts = append(card.Table.Parts, moved)
+	p, e := Build(im, card, card.Table.Size, "update", "Panels/Panel4", false, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	q, ok := p.Table.Find(AutoAPK)
+	if !ok || q.Number != 13 || q.Start != moved.Start || q.End != moved.End || q.ID != moved.ID {
+		t.Fatalf("the card's AUTOAPK isn't kept: %+v", q)
+	}
+	protected := false
+	for _, r := range p.Protected {
+		protected = protected || r.Name == AutoAPK
+	}
+	if !protected {
+		t.Error("the card's AUTOAPK isn't protected")
 	}
 }

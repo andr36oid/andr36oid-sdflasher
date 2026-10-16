@@ -171,6 +171,24 @@ func InspectCard(f io.ReaderAt, size int64) (Card, error) {
 	_, c.Treble = t.Find("vendor")
 	return c, nil
 }
+// MinCardBytes is the smallest card a new installation takes: every "16 GB" card
+// (15.5 to 16 GB real), not an 8 GB one. The image with its AUTOAPK partition is
+// about 5 GB and Android needs room on top for the apps the setup installs.
+var MinCardBytes int64 = 14e9
+
+// TooSmall is the error for a card under MinCardBytes, nil for a big enough one.
+func TooSmall(size int64) error {
+	if size >= MinCardBytes {
+		return nil
+	}
+	return fmt.Errorf("This card is too small. andr36oid needs a card of at least 16 GB; this one has %.1f GB.", float64(size)/1e9)
+}
+
+// AutoAPK is the partition with the bundled apps: in the image right after system,
+// where userdata goes. The console's first start moves it behind userdata and a
+// later start gives its space to userdata.
+const AutoAPK = "AUTOAPK"
+
 func Build(im *firmware.Image, card Card, size int64, mode, profile string, noROMs bool, userdataGiB int) (*Plan, error) {
 	if mode != "install" && mode != "update" {
 		return nil, errors.New("invalid operation")
@@ -195,10 +213,20 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 	}
 	p := &Plan{Mode: mode, Size: size, Profile: profile, NoROMs: noROMs, UserdataGiB: userdataGiB, OldFingerprint: card.Fingerprint}
 	p.Table = im.Table
-	p.Table.Parts = append([]layout.Partition{}, im.Table.Parts...)
+	p.Table.Parts = nil
+	for _, q := range im.Table.Parts {
+		// an update keeps the card's userdata where the image has AUTOAPK
+		if mode == "update" && q.Name == AutoAPK {
+			continue
+		}
+		p.Table.Parts = append(p.Table.Parts, q)
+	}
 	p.Table.Size = size
 	p.Table.ID = layout.GUID()
 	if mode == "install" {
+		if e := TooSmall(size); e != nil {
+			return nil, e
+		}
 		// Automatic on a small card is fine: the resizer gives Android the whole card.
 		// A size the user chose must leave the games partition they expect.
 		if _, roms := UserdataLayout(size, userdataGiB, noROMs); !noROMs && userdataGiB > 0 && roms == 0 {
@@ -216,12 +244,17 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 		}
 		for _, q := range card.Table.Parts {
 			switch q.Name {
-			case "userdata", "EASYROMS":
-				n := 6
-				if q.Name == "EASYROMS" {
-					n = 7
+			case "userdata", "EASYROMS", AutoAPK:
+				switch q.Name {
+				case "userdata":
+					q.Number = 6
+				case "EASYROMS":
+					q.Number = 7
+				default:
+					// moved behind userdata by the first start, until a later
+					// start gives its space to userdata
+					q.Number = 13
 				}
-				q.Number = n
 				p.Table.Parts = append(p.Table.Parts, q)
 				p.Protected = append(p.Protected, Range{q.Name, q.Offset(), q.Size()})
 			case "BOOT", "system", "vendor", "metadata", "misc", "cache", "idbloader", "uboot", "trust":
@@ -230,7 +263,7 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 			}
 		}
 		for i, q := range p.Table.Parts {
-			if q.Name == "userdata" || q.Name == "EASYROMS" {
+			if q.Name == "userdata" || q.Name == "EASYROMS" || q.Name == AutoAPK {
 				continue
 			}
 			old, exists := card.Table.Find(q.Name)
@@ -247,9 +280,10 @@ func Build(im *firmware.Image, card Card, size int64, mode, profile string, noRO
 			p.Writes = append(p.Writes, Write{Range: Range{q.Name, q.Offset(), q.Size()}, SourceOffset: q.Offset(), Boot: q.Name == "BOOT"})
 		}
 	}
-	// Windows only gets BOOT and EASYROMS; the rest would each pop up "format disk?"
+	// Windows only gets BOOT, EASYROMS and AUTOAPK (people may add their own APKs
+	// before the first start); the rest would each pop up "format disk?"
 	for i := range p.Table.Parts {
-		if n := p.Table.Parts[i].Name; n != "BOOT" && n != "EASYROMS" {
+		if n := p.Table.Parts[i].Name; n != "BOOT" && n != "EASYROMS" && n != AutoAPK {
 			p.Table.Parts[i].Flags |= layout.NoDriveLetter
 		}
 	}
