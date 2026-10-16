@@ -13,8 +13,9 @@ import (
 // refused before it is opened.
 var OldestBuild = time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC)
 
-// the build date in a file name: 20261011 in lineage-18.1-20261011-1531-r36s-android.img.zip,
-// also with the time run on (202507181828)
+// the build date in a file name: 20261016 in andr36oid-20261016-2212-rk3326.img.zip (and in
+// the older lineage-18.1-20261011-1531-r36s-android.img.zip), also with the time run on
+// (202507181828)
 var buildDate = regexp.MustCompile(`(?:^|[^0-9])(20[0-9]{2})(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])(?:[0-9]{4})?(?:[^0-9]|$)`)
 
 // BuildDate is the build date in an image's file name, if it has one.

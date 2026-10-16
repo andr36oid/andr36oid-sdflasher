@@ -4,6 +4,7 @@ import "testing"
 
 func TestTooOld(t *testing.T) {
 	for name, want := range map[string]string{
+		"andr36oid-20250903-2212-rk3326.img.zip":              "2025-09-03",
 		"lineage-18.1-20250902-2052-r36s-android.img.zip":     "2025-09-02",
 		"lineage-18.1-202507181828-r36s-android.img.zip":      "2025-07-18",
 		"lineage-18.1-20250712-r36s-android.zip":              "2025-07-12",
