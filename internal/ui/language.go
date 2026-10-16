@@ -80,6 +80,13 @@ func (s *screen) confirmDialog(title, message string, callback func(bool), paren
 	d.Show()
 }
 
+// ask: a question with its own button for yes
+func (s *screen) ask(title, message, yes string, callback func(bool)) {
+	d := dialog.NewCustomConfirm(title, yes, s.t("Cancel"), wrapped(message), callback, s.win)
+	fitDialog(d, message, s.win)
+	d.Show()
+}
+
 // fitDialog gives a dialog with a word-wrapped message a readable width; on its
 // own a wrapped label asks for almost none, and the text ends up a few words per
 // line. The height fits the message wrapped at that width.

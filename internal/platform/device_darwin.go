@@ -101,7 +101,7 @@ func Open(d Drive, write bool) (*Handle, error) {
 	}
 	if write {
 		if b, e := exec.Command("/usr/sbin/diskutil", "unmountDisk", d.Path).CombinedOutput(); e != nil {
-			return nil, fmt.Errorf("cannot unmount card: %s", b)
+			return nil, fmt.Errorf("%s%s (%s)", BusyPrefix, d.Path, strings.TrimSpace(string(b)))
 		}
 	}
 	flag := os.O_RDONLY

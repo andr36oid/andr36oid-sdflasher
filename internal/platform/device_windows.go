@@ -58,7 +58,7 @@ func Open(d Drive, write bool) (*Handle, error) {
 			for _, op := range []uint32{0x90018, 0x90020} {
 				if e = windows.DeviceIoControl(h, op, nil, 0, nil, 0, &n, nil); e != nil {
 					cleanup()
-					return nil, fmt.Errorf("cannot lock/unmount %s: %w", v, e)
+					return nil, fmt.Errorf("%s%s (%w)", BusyPrefix, v, e)
 				}
 			}
 		}

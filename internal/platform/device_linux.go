@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -89,6 +90,35 @@ func claimed(b block) bool {
 	return false
 }
 
+// unmount v for writing. A file manager or indexer may hold it for a moment, so a few
+// tries; still busy after that is a BusyPrefix error, and the user is asked to close
+// what uses it. Never a lazy unmount: the file system could still write to the card
+// after the image.
+func unmount(v string) error {
+	var out []byte
+	for i := 0; i < 5; i++ {
+		var e error
+		if out, e = exec.Command("umount", "--", v).CombinedOutput(); e == nil || !mounted(v) {
+			return nil
+		}
+		time.Sleep(time.Second)
+	}
+	return fmt.Errorf("%s%s (%s)", BusyPrefix, v, strings.TrimSpace(string(out)))
+}
+
+func mounted(v string) bool {
+	b, e := os.ReadFile("/proc/self/mounts")
+	if e != nil {
+		return true
+	}
+	for _, l := range strings.Split(string(b), "\n") {
+		if f := strings.Fields(l); len(f) > 0 && f[0] == v {
+			return true
+		}
+	}
+	return false
+}
+
 // sdSlot: an SD card in a built-in reader (PCIe readers such as Realtek's rtsx,
 // laptop and SBC slots). The kernel calls those cards not removable, but the card
 // type is SD; built-in eMMC storage is MMC.
@@ -149,8 +179,8 @@ func Open(d Drive, write bool) (*Handle, error) {
 	}
 	if write {
 		for _, v := range d.Volumes {
-			if b, e := exec.Command("umount", "--", v).CombinedOutput(); e != nil {
-				return nil, fmt.Errorf("cannot unmount %s: %s", v, b)
+			if e := unmount(v); e != nil {
+				return nil, e
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Drive struct {
@@ -24,6 +25,20 @@ func List() ([]Drive, error) { return list(false) }
 // ListAll also returns fixed disks (hard drives, SSDs, internal readers that show
 // up as one), still never the system or boot disk, a read-only one or one under 1 GiB.
 func ListAll() ([]Drive, error) { return list(true) }
+
+// BusyPrefix starts the error of a card that can't be written because one of its
+// volumes is in use and won't unmount; the app then asks the user to close what uses
+// it. The error crosses from the helper process as text, so it's a prefix.
+const BusyPrefix = "card in use: "
+
+// Busy reports whether msg is such an error, with what was in use.
+func Busy(msg string) (string, bool) {
+	i := strings.Index(msg, BusyPrefix)
+	if i < 0 {
+		return "", false
+	}
+	return msg[i+len(BusyPrefix):], true
+}
 
 func (d Drive) Label() string {
 	return fmt.Sprintf("%s · %.1f GB · %s", d.Name, float64(d.Size)/1e9, d.Path)

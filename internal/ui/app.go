@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 var Version = "development"
@@ -95,6 +96,15 @@ func Run() {
 	w.ShowAndRun()
 }
 func (s *screen) t(key string, args ...any) string { return i18n.Text(s.locale, key, args...) }
+
+// busyError: the card's volumes were in use and wouldn't unmount (platform.BusyPrefix)
+func busyError(e error) (string, bool) {
+	if e == nil {
+		return "", false
+	}
+	return platform.Busy(e.Error())
+}
+
 func wrapped(text string) *widget.Label {
 	l := widget.NewLabel(text)
 	l.Wrapping = fyne.TextWrapWord
@@ -661,6 +671,9 @@ func (s *screen) confirm() {
 	} else if s.custom != "" {
 		msg += "\n\n" + s.t(firmware.CustomWarning)
 	}
+	if len(s.drive.Volumes) > 0 {
+		msg += "\n\n" + s.t("Drives of this card that are open on this computer (%s) are closed first.", strings.Join(s.drive.Volumes, ", "))
+	}
 	// a fixed disk: the plain question isn't enough
 	if s.drive.Fixed {
 		s.agreeDialog(s.t("Write to a disk that is not a removable card?"), s.t("%s is not a removable card. If it is the wrong disk, what is on it is destroyed and cannot be recovered. Check the name and the size once more before you go on.", s.drive.Label())+"\n\n"+msg, s.t("This is the right disk. Write to it."), func(ok bool) {
@@ -740,6 +753,17 @@ func (s *screen) write(p *flash.Plan) {
 		fyne.Do(func() {
 			s.busy = false
 			back.Enable()
+			if detail, busy := busyError(e); busy {
+				// nothing was written yet: back to the setup, and the user closes what uses the card
+				s.win.SetContent(s.home)
+				s.setBusy(false)
+				s.ask(s.t("The card is in use"), s.t("The card can’t be written while it is open on this computer (%s). Close any windows or programs that show files from the card, or eject its drives, then try again.", detail), s.t("Try again"), func(ok bool) {
+					if ok {
+						s.write(p)
+					}
+				})
+				return
+			}
 			if e != nil {
 				title.SetText(s.t("Operation could not finish"))
 				phase.SetText(s.t("Check the selected image and card, then try again."))
