@@ -822,6 +822,12 @@ public final class MainActivity extends Activity {
         new Intent(Intent.ACTION_OPEN_DOCUMENT)
             .setType("*/*")
             .addCategory(Intent.CATEGORY_OPENABLE);
+    if (code == 1) {
+      // release images come packed: only .img.xz and .img.zip are listed
+      intent.putExtra(
+          Intent.EXTRA_MIME_TYPES,
+          new String[] {"application/x-xz", "application/zip", "application/x-zip-compressed"});
+    }
     startActivityForResult(intent, code);
   }
 
