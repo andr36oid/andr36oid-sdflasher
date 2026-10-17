@@ -15,6 +15,7 @@ import (
 	"github.com/andr36oid/andr36oid-sdflasher/internal/i18n"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/jobs"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/platform"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -322,6 +323,13 @@ func (s *screen) chooseImage() {
 		s.loadImage(p)
 	}, s.win)
 	d.SetFilter(storage.NewExtensionFileFilter([]string{".img", ".zip"}))
+	directory, _ := os.Getwd()
+	if s.im != nil && s.im.Source != "" {
+		directory = filepath.Dir(s.im.Source)
+	}
+	if location, err := storage.ListerForURI(storage.NewFileURI(directory)); err == nil {
+		d.SetLocation(location)
+	}
 	d.Show()
 }
 func (s *screen) loadImage(p string) {
@@ -409,7 +417,7 @@ func (s *screen) populateImage() {
 	if s.im == nil {
 		return
 	}
-	s.releaseLabel.SetText(s.im.Version + " · " + s.t("%d device profiles", len(s.im.Profiles)))
+	s.releaseLabel.SetText(s.im.Version + " · " + s.t("%d device profiles", len(s.im.Profiles)) + "\n" + filepath.Base(s.im.Source))
 	families := map[string]bool{}
 	var opts []string
 	for _, p := range s.im.Profiles {
@@ -727,6 +735,7 @@ func (s *screen) write(p *flash.Plan) {
 	s.win.SetContent(container.NewPadded(container.NewBorder(container.NewVBox(title, widget.NewLabel(s.drive.Label()), widget.NewSeparator()), back, nil, nil,
 		container.NewVScroll(container.NewVBox(phase, bar, outcome, m.img, legend(s.locale), details, eject)))))
 	req := jobs.Request{Action: "write", Drive: *s.drive, Image: s.im.Path, ImageHash: s.im.SHA256, CardFingerprint: s.card.Fingerprint, Mode: p.Mode, Profile: s.profile, NoROMs: p.NoROMs, UserdataGiB: p.UserdataGiB, CustomDTB: s.custom, CustomAccepted: s.customAccepted, ConvertDTB: s.convert, SystemImage: s.system, SystemAccepted: s.systemAccepted}
+	req.ImageSource = s.im.Source
 	var speed *flash.CardSpeed
 	go func() {
 		result, e := jobs.Run(req, func(p flash.Progress) {

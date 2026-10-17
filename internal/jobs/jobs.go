@@ -21,6 +21,7 @@ type Request struct {
 	Drive           platform.Drive `json:"drive"`
 	Image           string         `json:"image,omitempty"`
 	ImageHash       string         `json:"image_hash,omitempty"`
+	ImageSource     string         `json:"image_source,omitempty"`
 	CardFingerprint string         `json:"card_fingerprint,omitempty"`
 	Mode            string         `json:"mode,omitempty"`
 	Profile         string         `json:"profile,omitempty"`

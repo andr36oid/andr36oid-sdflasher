@@ -30,6 +30,8 @@ func Load(ctx context.Context, src, dir string, progress func(int64, int64)) (*I
 	im, err := inspect(ctx, staged, nil, hex.EncodeToString(digest.Sum(nil)))
 	if err != nil {
 		os.Remove(staged)
+	} else {
+		im.Source = src
 	}
 	return im, err
 }

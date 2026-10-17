@@ -37,6 +37,7 @@ type Profile struct {
 	Hash         string   `json:"hash"`
 }
 type Image struct {
+	Source   string       `json:"source,omitempty"`
 	Path     string       `json:"path"`
 	Size     int64        `json:"size"`
 	Table    layout.Table `json:"table"`
@@ -240,7 +241,7 @@ func inspect(ctx context.Context, p string, progress func(int64, int64), digest 
 	if len(profiles) == 0 {
 		return nil, errors.New("image has no complete shipped device profiles")
 	}
-	im := &Image{Path: p, Size: st.Size(), Table: t, Profiles: profiles, Version: "Treble build"}
+	im := &Image{Source: p, Path: p, Size: st.Size(), Table: t, Profiles: profiles, Version: "Treble build"}
 	for _, line := range strings.Split(string(props), "\n") {
 		if strings.HasPrefix(line, "ro.andr36oid.version=") {
 			im.Version = strings.TrimPrefix(line, "ro.andr36oid.version=")

@@ -147,7 +147,7 @@ func (s *screen) summarize() {
 	set := func(i int, v string) { s.sumValues[i].SetText(v) }
 	set(0, "")
 	if s.im != nil {
-		set(0, s.im.Version)
+		set(0, s.im.Version+"\n"+filepath.Base(s.im.Source))
 	}
 	set(1, "")
 	if s.drive != nil {
