@@ -128,7 +128,9 @@ func TestPreflightRejectsChangedImageAndCardWithoutWrites(t *testing.T) {
 			switch kind {
 			case "image":
 				f, _ := os.OpenFile(im.Path, os.O_RDWR, 0)
-				f.WriteAt([]byte{1}, 1000)
+				// A same-size payload edit leaves the metadata alone. The
+				// pre-write digest check must still catch it before any write.
+				f.WriteAt([]byte{1}, im.Size-1)
 				f.Close()
 			case "card":
 				dst.WriteAt([]byte{1}, 0)

@@ -121,14 +121,10 @@ func Worker(job string) error {
 		if req.CustomDTB != "" && !req.CustomAccepted {
 			return errors.New("custom DTB warning has not been accepted")
 		}
-		im, e := firmware.Inspect(context.Background(), req.Image, func(n, total int64) {
-			emit(Result{Progress: &flash.Progress{Phase: "preflight", Name: "Validating release", Done: n, Total: total}})
-		})
+		emit(Result{Progress: &flash.Progress{Phase: "preflight", Name: "Validating release"}})
+		im, e := firmware.InspectForWrite(context.Background(), req.Image, req.ImageHash)
 		if e != nil {
 			return e
-		}
-		if im.SHA256 != req.ImageHash {
-			return errors.New("image changed after selection")
 		}
 		h, e := platform.Open(d, true)
 		if e != nil {

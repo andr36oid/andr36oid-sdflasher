@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -102,15 +103,12 @@ func (s *Session) Load(path string, observer Observer) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.image = nil
-	staged, e := firmware.Stage(context.Background(), path, s.dir, progress(observer, "extracting"))
-	if e != nil {
-		return "", e
+	phase := "checking"
+	if strings.EqualFold(filepath.Ext(path), ".zip") {
+		phase = "extracting"
 	}
-	im, e := firmware.Inspect(context.Background(), staged, progress(observer, "checking"))
+	im, e := firmware.Load(context.Background(), path, s.dir, progress(observer, phase))
 	if e != nil {
-		if staged != path {
-			os.Remove(staged)
-		}
 		return "", e
 	}
 	s.image = im

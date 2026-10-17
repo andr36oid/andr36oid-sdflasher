@@ -15,7 +15,6 @@ import (
 	"github.com/andr36oid/andr36oid-sdflasher/internal/i18n"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/jobs"
 	"github.com/andr36oid/andr36oid-sdflasher/internal/platform"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -347,15 +346,8 @@ func (s *screen) loadImage(p string) {
 	go func() {
 		dir, e := jobs.CacheDir()
 		var im *firmware.Image
-		var staged string
 		if e == nil {
-			staged, e = firmware.Stage(ctx, p, dir, s.progressFn())
-		}
-		if e == nil {
-			im, e = firmware.Inspect(ctx, staged, s.progressFn())
-		}
-		if e != nil && staged != "" && staged != p {
-			os.Remove(staged)
+			im, e = firmware.Load(ctx, p, dir, s.progressFn())
 		}
 		fyne.Do(func() {
 			s.progress.Hide()

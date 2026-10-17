@@ -113,6 +113,23 @@ func (s bootStorage) ReadAt(p []byte, off int64) (int, error) {
 	return int(available), e
 }
 func Inspect(ctx context.Context, p string, progress func(int64, int64)) (*Image, error) {
+	return inspect(ctx, p, progress, "")
+}
+
+// InspectForWrite checks the release structure without hashing the whole file
+// again. Execute must check the digest saved at selection before writing.
+func InspectForWrite(ctx context.Context, p, selectedDigest string) (*Image, error) {
+	digest, err := hex.DecodeString(selectedDigest)
+	if err != nil || len(digest) != sha256.Size {
+		return nil, errors.New("invalid selected image checksum")
+	}
+	return inspect(ctx, p, nil, hex.EncodeToString(digest))
+}
+
+func inspect(ctx context.Context, p string, progress func(int64, int64), digest string) (*Image, error) {
+	if e := ctx.Err(); e != nil {
+		return nil, e
+	}
 	f, e := os.Open(p)
 	if e != nil {
 		return nil, e
@@ -229,7 +246,11 @@ func Inspect(ctx context.Context, p string, progress func(int64, int64)) (*Image
 			im.Version = strings.TrimPrefix(line, "ro.andr36oid.version=")
 		}
 	}
-	im.SHA256, e = Hash(ctx, f, st.Size(), progress)
+	if digest == "" {
+		im.SHA256, e = Hash(ctx, f, st.Size(), progress)
+	} else {
+		im.SHA256 = digest
+	}
 	return im, e
 }
 func Hash(ctx context.Context, r io.ReaderAt, size int64, progress func(int64, int64)) (string, error) {

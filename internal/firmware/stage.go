@@ -3,8 +3,11 @@ package firmware
 import (
 	"archive/zip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
@@ -13,8 +16,30 @@ import (
 
 const MaxImageSize int64 = 32 << 30
 
+// Load checks a release, hashing ZIP contents during extraction rather than
+// reading the expanded image a second time. Direct .img files are hashed normally.
+func Load(ctx context.Context, src, dir string, progress func(int64, int64)) (*Image, error) {
+	digest := sha256.New()
+	staged, err := stage(ctx, src, dir, progress, digest)
+	if err != nil {
+		return nil, err
+	}
+	if staged == src {
+		return Inspect(ctx, src, progress)
+	}
+	im, err := inspect(ctx, staged, nil, hex.EncodeToString(digest.Sum(nil)))
+	if err != nil {
+		os.Remove(staged)
+	}
+	return im, err
+}
+
 // Stage expands exactly one image. ZIP CRC verification completes before the file is accepted.
 func Stage(ctx context.Context, src, dir string, progress func(int64, int64)) (string, error) {
+	return stage(ctx, src, dir, progress, nil)
+}
+
+func stage(ctx context.Context, src, dir string, progress func(int64, int64), digest hash.Hash) (string, error) {
 	if strings.EqualFold(filepath.Ext(src), ".img") {
 		return src, nil
 	}
@@ -56,6 +81,10 @@ func Stage(ctx context.Context, src, dir string, progress func(int64, int64)) (s
 			os.Remove(name)
 		}
 	}()
+	var out io.Writer = dst
+	if digest != nil {
+		out = io.MultiWriter(dst, digest)
+	}
 	r, e := entry.Open()
 	if e != nil {
 		return "", e
@@ -73,7 +102,7 @@ func Stage(ctx context.Context, src, dir string, progress func(int64, int64)) (s
 			if written > MaxImageSize {
 				return "", errors.New("expanded image exceeds limit")
 			}
-			if _, e = dst.Write(buf[:n]); e != nil {
+			if _, e = out.Write(buf[:n]); e != nil {
 				return "", e
 			}
 			if progress != nil {
