@@ -33,7 +33,7 @@
   "Choose a release first. The conversion uses the DTBs of that release.": "Choose a release first. The conversion uses the DTBs of that release.",
   "Choose a release image": "Choose a release image",
   "Choose a release to see its supported consoles and panels.": "Choose a release to see its supported consoles and panels.",
-  "Choose an .img or .img.zip release image.": "Choose an .img or .img.zip release image.",
+  "Choose an .img, .img.xz or .img.zip release image.": "Choose an .img, .img.xz or .img.zip release image.",
   "Choose an .img system image.": "Choose an .img system image.",
   "Choose custom Android DTB…": "Choose custom Android DTB…",
   "Choose image from disk…": "Choose image from disk…",

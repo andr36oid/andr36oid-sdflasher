@@ -76,12 +76,20 @@ func usable(rel []release) []Asset {
 		if r.Draft || r.Published.Before(firmware.OldestBuild) {
 			continue
 		}
+		names := map[string]bool{}
+		for _, a := range r.Assets {
+			names[strings.ToLower(a.Name)] = true
+		}
 		for _, a := range r.Assets {
 			n := strings.ToLower(a.Name)
 			if _, old := firmware.TooOld(a.Name); old {
 				continue
 			}
-			if strings.HasSuffix(n, ".img.zip") || strings.HasSuffix(n, ".img") {
+			// a release that offers the image both ways lists only the smaller .img.xz
+			if strings.HasSuffix(n, ".img.zip") && names[strings.TrimSuffix(n, ".zip")+".xz"] {
+				continue
+			}
+			if strings.HasSuffix(n, ".img.xz") || strings.HasSuffix(n, ".img.zip") || strings.HasSuffix(n, ".img") {
 				a.Release = r.Name
 				if a.Release == "" {
 					a.Release = r.Tag

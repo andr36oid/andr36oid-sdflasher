@@ -20,3 +20,18 @@ func TestUsableSkipsOldBuilds(t *testing.T) {
 		t.Fatalf("got %+v", got)
 	}
 }
+
+func TestUsablePrefersXZ(t *testing.T) {
+	day := func(s string) time.Time { d, _ := time.Parse("2006-01-02", s); return d }
+	got := usable([]release{
+		{Tag: "rc3", Published: day("2026-10-18"), Assets: []Asset{
+			{Name: "andr36oid-20261018-1200-rk3326.img.zip"},
+			{Name: "andr36oid-20261018-1200-rk3326.img.xz"},
+			{Name: "andr36oid-20261018-1200-rk3326.img.xz.sha256"},
+		}},
+		{Tag: "rc2", Published: day("2026-10-17"), Assets: []Asset{{Name: "andr36oid-20261017-0354-rk3326.img.zip"}}},
+	})
+	if len(got) != 2 || got[0].Name != "andr36oid-20261018-1200-rk3326.img.xz" || got[1].Name != "andr36oid-20261017-0354-rk3326.img.zip" {
+		t.Fatalf("got %+v", got)
+	}
+}

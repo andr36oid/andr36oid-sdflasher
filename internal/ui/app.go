@@ -322,7 +322,7 @@ func (s *screen) chooseImage() {
 		r.Close()
 		s.loadImage(p)
 	}, s.win)
-	d.SetFilter(storage.NewExtensionFileFilter([]string{".img", ".zip"}))
+	d.SetFilter(storage.NewExtensionFileFilter([]string{".img", ".xz", ".zip"}))
 	directory, _ := os.Getwd()
 	if s.im != nil && s.im.Source != "" {
 		directory = filepath.Dir(s.im.Source)

@@ -16,7 +16,7 @@ import (
 
 const MaxImageSize int64 = 32 << 30
 
-// Load checks a release, hashing ZIP contents during extraction rather than
+// Load checks a release, hashing ZIP and XZ contents during extraction rather than
 // reading the expanded image a second time. Direct .img files are hashed normally.
 func Load(ctx context.Context, src, dir string, progress func(int64, int64)) (*Image, error) {
 	digest := sha256.New()
@@ -36,7 +36,7 @@ func Load(ctx context.Context, src, dir string, progress func(int64, int64)) (*I
 	return im, err
 }
 
-// Stage expands exactly one image. ZIP CRC verification completes before the file is accepted.
+// Stage expands exactly one image. ZIP CRC and XZ block checks complete before the file is accepted.
 func Stage(ctx context.Context, src, dir string, progress func(int64, int64)) (string, error) {
 	return stage(ctx, src, dir, progress, nil)
 }
@@ -45,8 +45,11 @@ func stage(ctx context.Context, src, dir string, progress func(int64, int64), di
 	if strings.EqualFold(filepath.Ext(src), ".img") {
 		return src, nil
 	}
+	if strings.EqualFold(filepath.Ext(src), ".xz") {
+		return stageXZ(ctx, src, dir, progress, digest)
+	}
 	if !strings.EqualFold(filepath.Ext(src), ".zip") {
-		return "", errors.New("choose an .img or .img.zip release image")
+		return "", errors.New("choose an .img, .img.xz or .img.zip release image")
 	}
 	z, e := zip.OpenReader(src)
 	if e != nil {

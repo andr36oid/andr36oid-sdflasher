@@ -33,7 +33,7 @@
   "Choose a release first. The conversion uses the DTBs of that release.": "Спочатку вибери випуск. Для перетворення використовуються DTB цього випуску.",
   "Choose a release image": "Вибери образ випуску",
   "Choose a release to see its supported consoles and panels.": "Вибери випуск, щоб побачити підтримувані консолі та панелі.",
-  "Choose an .img or .img.zip release image.": "Вибери образ випуску у форматі .img або .img.zip.",
+  "Choose an .img, .img.xz or .img.zip release image.": "Вибери образ випуску у форматі .img, .img.xz або .img.zip.",
   "Choose an .img system image.": "Вибери образ системи у форматі .img.",
   "Choose custom Android DTB…": "Вибрати власний Android DTB…",
   "Choose image from disk…": "Вибрати образ із диска…",

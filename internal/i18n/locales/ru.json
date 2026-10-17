@@ -33,7 +33,7 @@
   "Choose a release first. The conversion uses the DTBs of that release.": "Сначала выберите выпуск. Для преобразования используются DTB из этого выпуска.",
   "Choose a release image": "Выберите образ выпуска",
   "Choose a release to see its supported consoles and panels.": "Выберите выпуск, чтобы увидеть поддерживаемые им консоли и экраны.",
-  "Choose an .img or .img.zip release image.": "Выберите образ выпуска в формате .img или .img.zip.",
+  "Choose an .img, .img.xz or .img.zip release image.": "Выберите образ выпуска в формате .img, .img.xz или .img.zip.",
   "Choose an .img system image.": "Выберите образ системы в формате .img.",
   "Choose custom Android DTB…": "Выбрать свой Android DTB…",
   "Choose image from disk…": "Выбрать образ с диска…",

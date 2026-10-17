@@ -841,8 +841,9 @@ public final class MainActivity extends Activity {
       showError(t("Choose an .img system image."));
       return;
     }
-    if (request == 1 && !(lower.endsWith(".img") || lower.endsWith(".zip"))) {
-      showError(t("Choose an .img or .img.zip release image."));
+    if (request == 1
+        && !(lower.endsWith(".img") || lower.endsWith(".zip") || lower.endsWith(".xz"))) {
+      showError(t("Choose an .img, .img.xz or .img.zip release image."));
       return;
     }
     // a build too old for this flasher: refused by its name, before it is copied
@@ -860,7 +861,11 @@ public final class MainActivity extends Activity {
       return;
     }
     final String extension =
-        request == 4 ? ".img" : request >= 2 ? ".dtb" : lower.endsWith(".zip") ? ".zip" : ".img";
+        request == 4
+            ? ".img"
+            : request >= 2
+                ? ".dtb"
+                : lower.endsWith(".zip") ? ".zip" : lower.endsWith(".xz") ? ".xz" : ".img";
     final String shown = name;
     final Context app = getApplicationContext();
     WorkState.start(

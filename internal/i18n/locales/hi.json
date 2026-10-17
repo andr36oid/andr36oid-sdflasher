@@ -33,7 +33,7 @@
   "Choose a release first. The conversion uses the DTBs of that release.": "पहले एक रिलीज़ चुनें। कन्वर्ज़न के लिए उसी रिलीज़ की DTB का उपयोग होता है।",
   "Choose a release image": "रिलीज़ इमेज चुनें",
   "Choose a release to see its supported consoles and panels.": "समर्थित कंसोल और पैनल देखने के लिए रिलीज़ चुनें।",
-  "Choose an .img or .img.zip release image.": ".img या .img.zip रिलीज़ इमेज चुनें।",
+  "Choose an .img, .img.xz or .img.zip release image.": ".img, .img.xz या .img.zip रिलीज़ इमेज चुनें।",
   "Choose an .img system image.": ".img सिस्टम इमेज चुनें।",
   "Choose custom Android DTB…": "कस्टम Android DTB चुनें…",
   "Choose image from disk…": "डिस्क से इमेज चुनें…",

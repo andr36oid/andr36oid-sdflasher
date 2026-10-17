@@ -33,7 +33,7 @@
   "Choose a release first. The conversion uses the DTBs of that release.": "请先选择一个版本。转换会使用该版本的 DTB。",
   "Choose a release image": "选择版本镜像",
   "Choose a release to see its supported consoles and panels.": "选择版本以查看支持的掌机和屏幕。",
-  "Choose an .img or .img.zip release image.": "选择 .img 或 .img.zip 格式的版本镜像。",
+  "Choose an .img, .img.xz or .img.zip release image.": "选择 .img、.img.xz 或 .img.zip 格式的版本镜像。",
   "Choose an .img system image.": "选择 .img 格式的系统镜像。",
   "Choose custom Android DTB…": "选择自定义 Android DTB…",
   "Choose image from disk…": "从磁盘选择镜像…",
