@@ -4,6 +4,9 @@ import sys
 from urllib.parse import quote
 
 tag = sys.argv[1]
+summary = pathlib.Path('release-notes') / (tag + '.md')
+if summary.is_file():
+    print(summary.read_text().strip() + '\n')
 root = pathlib.Path('dist')
 base = 'https://github.com/andr36oid/andr36oid-sdflasher/releases/download/' + quote(tag, safe='') + '/'
 rows = []
